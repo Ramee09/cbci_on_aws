@@ -66,7 +66,7 @@ Gate: owner approves "proceed."
 
 ---
 
-## Phase 6 — Ingress, DNS, TLS [NEXT]
+## Phase 6 — Ingress, DNS, TLS [DONE]
 Claude Code does:
 - Install AWS Load Balancer Controller via Helm with IRSA (pinned version)
 - If owner has a domain: install ExternalDNS via Helm with IRSA, pointing at Route 53 hosted zone. If no domain: skip ExternalDNS, use raw ALB hostnames.
@@ -78,7 +78,7 @@ Gate: owner approves "proceed" (confirming whether a domain is in use).
 
 ---
 
-## Phase 7 — CBCI install: Operations Center
+## Phase 7 — CBCI install: Operations Center [NEXT]
 Claude Code does:
 - Add CloudBees Helm repo, pin chart version
 - Write `helm/values-base.yaml` — OC only (controllers come in Phase 9), EFS storage, ALB ingress, resource requests/limits, IRSA-annotated ServiceAccount
