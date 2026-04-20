@@ -7,7 +7,7 @@ spec:
     storage: 20Gi
   volumeMode: Filesystem
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: efs-ap
   csi:
@@ -21,7 +21,7 @@ metadata:
   namespace: cloudbees
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   storageClassName: efs-ap
   resources:
     requests:
