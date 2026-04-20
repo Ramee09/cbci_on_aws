@@ -1,0 +1,26 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  # Placeholder replaced by sed in null_resource — actual value from: terraform output karpenter_node_role_name
+  role: "KARPENTER_NODE_ROLE"
+
+  # Amazon Linux 2023 — matches the system node group AMI family
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # Discover private subnets via the tag set in Phase 2
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: cbci-lab
+
+  # Discover node security group via the tag set in terraform/40-addons
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: cbci-lab
+
+  tags:
+    Project:     cbci-lab
+    ManagedBy:   karpenter
+    Environment: lab

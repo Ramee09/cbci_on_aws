@@ -1,6 +1,8 @@
 # Phased Plan — CBCI on AWS
 
-Status legend: `TODO` | `NEXT` | `IN PROGRESS` | `DONE` | `🛑 HUMAN`
+Status legend: `TODO` | `NEXT` | `IN PROGRESS` | `DONE`
+
+Claude Code implements every phase end-to-end. The owner approves plans before state-changing actions. No hand-written YAML, Terraform, or Helm values expected from the owner.
 
 ---
 
@@ -10,159 +12,212 @@ Project scaffold, .gitignore, README, CLAUDE.md, PLAN.md, folder structure, pre-
 ---
 
 ## Phase 1 — Terraform remote state [DONE]
-Claude Code does:
-- Write `terraform/00-bootstrap/main.tf`: S3 bucket `cbci-lab-tfstate-<accountId>` (versioning, encryption, public access block) and DynamoDB table `cbci-lab-tf-locks`
-- `terraform init` + `terraform plan` (show plan to owner)
-- After owner says "apply", run `terraform apply`
-- Commit: `phase 1: tf remote state backend`
+Claude Code wrote `terraform/00-bootstrap/main.tf`: S3 bucket `cbci-lab-tfstate-<accountId>` (versioning, encryption, public access block) and DynamoDB table `cbci-lab-tf-locks`. Applied, committed.
 
-Gate: owner verifies bucket and table exist in AWS Console.
+Gate met: owner verified bucket and table exist in AWS Console.
 
 ---
 
 ## Phase 2 — VPC + networking [DONE]
-Claude Code does:
-- Write `terraform/10-network/`:
-  - Use `terraform-aws-modules/vpc/aws` v5.x
-  - VPC 10.0.0.0/16, 3 AZs, 3 public + 3 private subnets
-  - Single NAT gateway (cost mode)
-  - Subnet tags: `kubernetes.io/role/elb=1` (public), `kubernetes.io/role/internal-elb=1` (private), `karpenter.sh/discovery=cbci-lab` (private)
-  - S3 backend pointing at Phase 1 bucket
-- `plan` → show → apply on approval
-- Commit: `phase 2: VPC with 3 AZs + single NAT`
+Claude Code wrote `terraform/10-network/` using `terraform-aws-modules/vpc/aws` v5.x: VPC 10.0.0.0/16, 3 AZs, 3 public + 3 private subnets, single NAT gateway, subnet tags for EKS and Karpenter discovery. Remote state in Phase 1 bucket. Applied, committed.
 
 Cost: NAT gateway ~$1/day.
-Gate: owner sees VPC in Console.
+Gate met: owner saw VPC in Console.
 
 ---
 
 ## Phase 3 — EKS cluster + system node group [DONE]
-Claude Code does:
-- Write `terraform/20-eks/`:
-  - Use `terraform-aws-modules/eks/aws` v20.x
-  - EKS 1.31, private API endpoint, public access restricted to owner's home IP
-  - Managed node group `system`: 2× t3.medium on-demand, in private subnets
-  - OIDC provider for IRSA
-  - Add-ons: vpc-cni, coredns, kube-proxy, aws-ebs-csi-driver, aws-efs-csi-driver, metrics-server
-- Apply on approval
-- Verify `kubectl get nodes` shows 2 Ready nodes
-- Commit: `phase 3: EKS 1.31 + system node group + OIDC`
+Claude Code wrote `terraform/20-eks/` using `terraform-aws-modules/eks/aws` v20.x: EKS 1.31, private API endpoint with restricted public access, managed node group `system` (2× t3.medium on-demand in private subnets), OIDC provider for IRSA, add-ons (vpc-cni, coredns, kube-proxy, aws-ebs-csi-driver, aws-efs-csi-driver, metrics-server). Applied, `kubectl get nodes` verified 2 Ready nodes, committed.
 
 Cost: EKS control plane ~$2.40/day (24/7).
-Gate: owner sees cluster healthy.
+Gate met: owner saw cluster healthy.
 
 ---
 
-## Phase 4 — Karpenter + workload NodePools [NEXT]
+## Phase 4 — Karpenter + workload NodePools [DONE]
 Claude Code does:
 - IAM roles for Karpenter node + controller (with IRSA)
 - Install Karpenter via Helm, pinned version
 - Two NodePools + one EC2NodeClass:
-  - `controllers`: on-demand, t3.large/t3.xlarge
-  - `agents`: spot+on-demand, taint `workload=agents:NoSchedule`
-- Smoke test: throwaway pod scales up and back down
+  - `controllers`: on-demand, t3.large/t3.xlarge, label `nodepool=controllers`
+  - `agents`: spot+on-demand fallback, t3.medium/t3.large/m5.large, taint `workload=agents:NoSchedule`, label `nodepool=agents`
+- EC2NodeClass: AL2023, subnet and SG discovery by `karpenter.sh/discovery=cbci-lab`
+- Smoke test: deploy throwaway pod tolerating agent taint → Karpenter provisions node in ~60s → delete pod → node consolidates away
 - Commit: `phase 4: Karpenter + NodePools`
 
-Gate: owner confirms Karpenter scaled up and back down.
+Gate: owner approves "proceed."
 
 ---
 
-## Phase 5 — EFS filesystem + StorageClass
+## Phase 5 — EFS filesystem + StorageClass [NEXT]
 Claude Code does:
 - Write `terraform/30-storage/`:
-  - KMS key with rotation
-  - EFS filesystem: `performance_mode=generalPurpose`, `throughput_mode=elastic`
+  - KMS key with rotation enabled
+  - EFS filesystem: `performance_mode=generalPurpose`, `throughput_mode=elastic`, KMS-encrypted
   - Mount targets in all 3 private subnets
   - Security group allowing NFS (2049) from EKS node SG
-  - Access Points: `/oc` and `/devflow`
-- Write `k8s/storageclass-efs.yaml` with `provisioningMode: efs-ap`, `reclaimPolicy: Retain`
-- Smoke test: test PVC + 2 pods in different AZs write/read same file
-- Commit: `phase 5: EFS + StorageClass + cross-AZ RWX verified`
+  - Access Points: `/oc` (uid/gid 1000) and `/devflow` (uid/gid 1000)
+- Write `k8s/storageclass-efs.yaml`: `provisioner: efs.csi.aws.com`, `provisioningMode: efs-ap`, `reclaimPolicy: Retain`
+- Apply TF, apply StorageClass
+- Smoke test: create test PVC + two pods in different AZs, write file from pod A, read from pod B — confirm RWX works cross-AZ, delete test
+- Commit: `phase 5: EFS + KMS + StorageClass + cross-AZ RWX verified`
 
-Gate: owner sees EFS in Console and confirms smoke test passed.
+Gate: owner approves "proceed."
 
 ---
 
 ## Phase 6 — Ingress, DNS, TLS
 Claude Code does:
-- AWS Load Balancer Controller via Helm with IRSA
-- ExternalDNS with IRSA (if owner has a domain)
-- ACM certificate for `*.<domain>` (DNS-validated)
-- Throwaway nginx test with HTTPS
-- Commit: `phase 6: ingress + DNS + TLS`
+- Install AWS Load Balancer Controller via Helm with IRSA (pinned version)
+- If owner has a domain: install ExternalDNS via Helm with IRSA, pointing at Route 53 hosted zone. If no domain: skip ExternalDNS, use raw ALB hostnames.
+- If owner has a domain: create ACM certificate for `*.<domain>` (DNS-validated)
+- Smoke test: deploy throwaway nginx + Ingress with ALB annotations → verify HTTPS works end-to-end → delete test
+- Commit: `phase 6: ingress + DNS + TLS plumbing verified`
 
-Gate: owner confirms test URL works (or acknowledges no-domain path).
+Gate: owner approves "proceed" (confirming whether a domain is in use).
 
 ---
 
-## Phase 7 — CBCI install: Operations Center only, no CasC yet
+## Phase 7 — CBCI install: Operations Center
 Claude Code does:
-- Pin CloudBees Helm chart version
-- Write `helm/values-base.yaml` — OC only, EFS storage, ALB ingress, resources, IRSA SA
+- Add CloudBees Helm repo, pin chart version
+- Write `helm/values-base.yaml` — OC only (controllers come in Phase 9), EFS storage, ALB ingress, resource requests/limits, IRSA-annotated ServiceAccount
 - Create `cloudbees` namespace
-- `helm install`
-- Print OC URL
+- `helm install cbci cloudbees/cloudbees-core -n cloudbees -f helm/values-base.yaml`
+- Wait for OC pod Ready
+- Retrieve OC initial admin password from pod logs
+- Trial license: owner provides key if purchased, otherwise use built-in evaluation
+- Complete setup wizard programmatically via API/CLI if possible, or document one-time UI click-through
+- Verify OC UI loads via ALB URL
+- Commit: `phase 7: CBCI OC installed`
 
-🛑 **HUMAN:** Owner completes setup wizard, enters CBCI trial license, creates admin, confirms UI loads.
-
-Gate: owner says "OC is up, proceed"
-
----
-
-## Phase 8 — OC CasC bundle 🛑 HUMAN PRIMARY
-Owner writes `casc/oc-bundle/` (bundle.yaml, jenkins.yaml, plugins.yaml, items.yaml).
-Owner creates ConfigMap, updates Helm values, upgrades chart.
-Claude Code helps with YAML syntax.
-
-Gate: owner says "CasC loaded, changes apply, proceed"
+Gate: owner visits OC URL, confirms it loads, approves "proceed."
 
 ---
 
-## Phase 9 — First managed controller (single replica) 🛑 HUMAN PRIMARY
-Owner writes `casc/controller-bundles/devflow/`, declares controller in OC items.yaml, runs test pipeline on pod agent.
+## Phase 8 — OC CasC bundle (ConfigMap delivery)
+Claude Code does:
+- Write `casc/oc-bundle/bundle.yaml` — id, version, description
+- Write `casc/oc-bundle/jenkins.yaml` — local admin security realm (SSO comes in 12a), authorization strategy
+- Write `casc/oc-bundle/plugins.yaml` — base plugin list, pinned versions
+- Write `casc/oc-bundle/items.yaml` — empty for now (controllers declared in Phase 9)
+- Create ConfigMap: `kubectl create configmap oc-casc-bundle --from-file=casc/oc-bundle/ -n cloudbees`
+- Update `helm/values-base.yaml` to mount the ConfigMap as CasC source
+- `helm upgrade cbci ...`
+- Restart OC pod, verify bundle loaded in Manage Jenkins → CasC
+- Commit: `phase 8: OC CasC bundle via ConfigMap`
 
-Gate: owner says "controller up, test pipeline green, proceed"
+Gate: owner approves "proceed."
 
 ---
 
-## Phase 10 — Active-active HA 🛑 HUMAN PRIMARY
-Enable HA (2+ replicas), test failover, verify HPA scales on load.
+## Phase 9 — First managed controller (single replica)
+Claude Code does:
+- Write `casc/controller-bundles/devflow/`:
+  - `bundle.yaml`, `jenkins.yaml` (Kubernetes cloud config, pod template for agents), `plugins.yaml`, `plugin-catalog.yaml`, `items.yaml` (one test folder + Hello World pipeline), `rbac.yaml`
+- Create the controller bundle ConfigMap
+- Update `casc/oc-bundle/items.yaml` to declare the `devflow` managed controller
+- Refresh OC ConfigMap, trigger OC reconcile
+- Watch controller provisioning, verify Ready
+- Trigger the test pipeline, verify pod agent spawns on the `agents` NodePool, verify build passes
+- Commit: `phase 9: devflow controller + test pipeline green`
 
-Gate: owner says "HA working, failover verified"
+Gate: owner approves "proceed."
+
+---
+
+## Phase 10 — Active-active HA
+Claude Code does:
+- Update `casc/oc-bundle/items.yaml` devflow entry: `highAvailability.enabled=true`, `replicas=2`, `maxReplicas=4`, `cpuThreshold=70`
+- Refresh ConfigMap, trigger OC reconcile
+- Verify 2 replicas up, both mounting the same EFS access point
+- Failover test: delete one replica pod mid-build, verify build continues on the other replica
+- HPA test: generate synthetic CPU load, verify replicas scale up and back down
+- Print failover timing and HPA behavior to owner
+- Commit: `phase 10: active-active HA verified`
+
+Gate: owner approves "proceed."
 
 ---
 
 ## Phase 11 — Observability
-Claude Code installs kube-prometheus-stack + Fluent Bit.
-🛑 **HUMAN:** Owner enables CBCI metrics endpoint in CasC, imports Grafana dashboard, adds probes.
+Claude Code does:
+- Install `kube-prometheus-stack` via Helm (pinned) in `monitoring` namespace
+- Enable CBCI Prometheus metrics endpoint via controller CasC bundle
+- Install Fluent Bit DaemonSet shipping pod logs to CloudWatch Logs group `/aws/eks/cbci-lab` (IRSA for write access)
+- Import official CloudBees Grafana dashboard
+- Add liveness/readiness/startup probes to OC and controllers in CasC
+- Print Grafana URL and initial admin credentials to owner
+- Commit: `phase 11: observability stack`
 
-Gate: Grafana dashboard populated.
+Gate: owner confirms dashboard is populated, approves "proceed."
 
 ---
 
-## Phase 12 — Secrets + SSO 🛑 HUMAN PRIMARY
-External Secrets Operator, Secrets Manager entries, ExternalSecret resources, SSO in CasC.
+## Phase 12a — Entra ID SAML SSO
+Identity provider: owner's personal Microsoft Entra tenant (free tier — no license purchase).
+Plugin: Jenkins SAML Plugin, pinned in `plugins.yaml`.
 
-Gate: SSO works, no static creds in Git.
+Entra-side setup (owner clicks through the Entra admin UI with Claude Code's exact click-path and values):
+- Create a SAML Enterprise Application for CBCI
+- Create AD groups: `cbci-admins`, `cbci-devflow-admins`, `cbci-devflow-developers`, `cbci-readonly`
+- Assign self + one test user to groups
+- Provide Claude Code with the federation metadata URL, entity ID, and SAML signing certificate
+
+CBCI-side setup (Claude Code does):
+- Add `saml` plugin to `plugins.yaml` at pinned version
+- Configure SAML security realm in OC `jenkins.yaml` — entity ID, reply URL, metadata URL, attribute mappings for groups, NameID format
+- Configure group-based RBAC in `rbac.yaml` — map Entra group names to Jenkins global + per-controller roles
+- Reload bundle
+- Test: log in as admin test user (observes admin permissions), log in as developer test user (observes restricted permissions)
+- Troubleshoot any entity ID / reply URL / certificate / NameID format mismatches
+- Commit: `phase 12a: Entra SAML SSO with group-based RBAC`
+
+Gate: owner logs in via Entra as both admin and developer, confirms correct permissions in each case, approves "proceed."
+
+---
+
+## Phase 12b — Secrets management
+Claude Code does:
+- Install External Secrets Operator via Helm (pinned) with IRSA
+- Create ClusterSecretStore pointing at AWS Secrets Manager
+- For each credential CBCI needs: create Secrets Manager entry + corresponding `ExternalSecret` resource
+- Update CBCI CasC to reference synced secrets via Jenkins credential providers
+- Audit all Git-tracked files for hardcoded credentials (grep for common patterns)
+- Commit: `phase 12b: secrets via ESO + Secrets Manager`
+
+Gate: owner approves "proceed."
 
 ---
 
 ## Phase 13 — Backup + DR drill
-Claude Code sets up AWS Backup for EFS + Velero for K8s.
-🛑 **HUMAN:** Owner runs DR drill — delete namespace, restore, time the RTO, document in runbook.
+Claude Code does:
+- Enable AWS Backup plan for EFS filesystem — daily snapshot, 7-day retention
+- Install Velero via Helm with AWS plugin + IRSA, S3 bucket for backups
+- Schedule daily Velero backup of `cloudbees` namespace, 7-day retention
+- Run DR drill: delete `cloudbees` namespace, restore from Velero, measure RTO
+- Document results and runbook in `docs/runbooks/dr-restore.md`
+- Print measured RTO to owner
+- Commit: `phase 13: backup + DR drill, RTO documented`
 
-Gate: RTO measured and documented.
+Gate: owner approves "proceed."
 
 ---
 
-## Phase 14 — Migrate CasC to SCM (GitOps) 🛑 HUMAN PRIMARY
-Bundle Service polling Git, retire ConfigMap delivery, PR-driven CasC changes.
+## Phase 14 — Migrate CasC to SCM (GitOps Bundle Service)
+Claude Code does:
+- Create Git structure for CasC bundles (subdirectory of this repo or separate repo — owner decides)
+- Configure OC Bundle Service to poll the Git source
+- Retire ConfigMap-based delivery
+- Make a test change via PR → merge → watch OC pick it up → verify controllers reconcile
+- Document GitOps workflow in `docs/runbooks/casc-gitops.md`
+- Commit: `phase 14: CasC via SCM Bundle Service — project complete`
 
-Gate: full GitOps loop proven.
+Gate: owner approves "project complete."
 
 ---
 
 ## Session hygiene
 Start: `aws sts get-caller-identity`, `git pull`, check PLAN.md for NEXT.
 End: commit, push, lab-stop, update PLAN.md.
-Nuclear: `terraform destroy` in reverse order.
+Nuclear: `terraform destroy` in reverse order (40 → 30 → 20 → 10, keep 00 bootstrap).
