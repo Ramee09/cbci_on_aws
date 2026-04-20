@@ -1,0 +1,4 @@
+plugins: []
+# Additional plugins pinned here as phases require them:
+#   Phase 12a: saml plugin
+#   Phase 12b: no additional OC plugins needed

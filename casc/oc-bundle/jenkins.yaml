@@ -1,0 +1,20 @@
+jenkins:
+  systemMessage: "CloudBees CI Operations Center — managed via CasC"
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          name: "Administrator"
+          # Phase 12b: move to AWS Secrets Manager + ESO
+          password: "${JENKINS_ADMIN_PASSWORD}"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "http://k8s-cloudbee-cjoc-067a804de0-1896209696.us-east-1.elb.amazonaws.com/cjoc/"
+    adminAddress: ""

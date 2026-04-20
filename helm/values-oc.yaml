@@ -1,6 +1,45 @@
 OperationsCenter:
   Platform: standard
 
+  # Disabled: we mount the bundle manually via initContainer + emptyDir
+  # to avoid the Kubernetes ConfigMap symlink structure causing validation errors.
+  CasC:
+    Enabled: false
+
+  # Point CBCI at the emptyDir where initContainer copied the real files
+  JavaOpts: "-Dcore.casc.config.bundle=/var/jenkins_casc-real"
+
+  # Phase 12b: replace with ESO-sourced Kubernetes secret
+  ContainerEnv:
+    - name: JENKINS_ADMIN_PASSWORD
+      value: "bf386caf76c04f4681dea2c741471499"
+
+  # Copy bundle files from ConfigMap (symlink structure) to emptyDir (real files)
+  # cp -L resolves symlinks so CBCI sees only plain YAML — no ..data/ or timestamp dirs
+  ExtraInitContainers:
+    - name: casc-bundle-copy
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - "cp -L /var/jenkins_casc-src/* /var/jenkins_casc-real/"
+      volumeMounts:
+        - name: casc-bundle-src
+          mountPath: /var/jenkins_casc-src
+        - name: casc-bundle-real
+          mountPath: /var/jenkins_casc-real
+
+  ExtraVolumes:
+    - name: casc-bundle-src
+      configMap:
+        name: oc-casc-bundle
+    - name: casc-bundle-real
+      emptyDir: {}
+
+  ExtraVolumeMounts:
+    - name: casc-bundle-real
+      mountPath: /var/jenkins_casc-real
+
   # Schedule OC on the Karpenter controllers NodePool (on-demand, t3.large/xlarge)
   NodeSelector:
     role: controller
@@ -15,7 +54,6 @@ OperationsCenter:
 
   ServiceType: ClusterIP
 
-  # No hostname — ALB auto-assigns a DNS name. Set JenkinsRootURL via CasC in Phase 8.
   HostName: null
 
   Ingress:

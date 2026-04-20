@@ -1,0 +1,5 @@
+removeStrategy:
+  rbac: NONE
+  items: NONE
+items: []
+# Managed controllers declared here in Phase 9
