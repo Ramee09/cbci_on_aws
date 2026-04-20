@@ -1,5 +1,5 @@
 id: "oc-bundle"
-version: "4"
+version: "8"
 apiVersion: 1
 description: "Operations Center CasC bundle — managed via ConfigMap"
 jcasc:

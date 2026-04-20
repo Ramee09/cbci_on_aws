@@ -1,0 +1,28 @@
+removeStrategy:
+  rbac: SYNC
+  items: SYNC
+items:
+  - kind: folder
+    name: "pipelines"
+    displayName: "Pipelines"
+    items:
+      - kind: pipeline
+        name: "hello-world"
+        displayName: "Hello World"
+        definition:
+          cpsFlowDefinition:
+            script: |
+              pipeline {
+                agent {
+                  label 'default-agent'
+                }
+                stages {
+                  stage('Hello') {
+                    steps {
+                      echo "Hello from pod agent on EKS! Node: ${env.NODE_NAME}"
+                      sh 'uname -a'
+                    }
+                  }
+                }
+              }
+            sandbox: true

@@ -1,5 +1,16 @@
 removeStrategy:
-  rbac: NONE
-  items: NONE
-items: []
-# Managed controllers declared here in Phase 9
+  rbac: SYNC
+  items: SYNC
+items:
+  - kind: managedMaster
+    name: "devflow"
+    displayName: "DevFlow"
+    properties:
+      - class: com.cloudbees.opscenter.server.properties.SlaveAgentPortProperty
+      - class: com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
+        disk: 20
+        memory: 2048
+        cpus: 1.0
+        fsGroup: "1000"
+        storageClassName: "efs-ap"
+        nodeSelector: "role=controller"

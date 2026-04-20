@@ -1,0 +1,8 @@
+id: "devflow"
+version: "1"
+apiVersion: 1
+description: "DevFlow managed controller CasC bundle"
+jcasc:
+  - "jenkins.yaml"
+items:
+  - "items.yaml"

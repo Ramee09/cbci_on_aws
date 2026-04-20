@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jenkins-home-devflow-0
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-ap
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: "fs-0b4f7798361a31568::fsap-0a6e126668550e329"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-home-devflow-0
+  namespace: cloudbees
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: efs-ap
+  resources:
+    requests:
+      storage: 20Gi
+  volumeName: jenkins-home-devflow-0
