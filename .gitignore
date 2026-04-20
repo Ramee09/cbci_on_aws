@@ -1,0 +1,62 @@
+# === Terraform ===
+**/.terraform/*
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfplan
+*.tfplan.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform vars — commit examples, never real values
+*.tfvars
+*.tfvars.json
+!example.tfvars
+!example.tfvars.json
+
+# === AWS credentials — NEVER commit ===
+.aws/
+credentials
+*.pem
+*.key
+*.p12
+*.pfx
+
+# === Kubernetes ===
+kubeconfig
+kubeconfig-*
+*-kubeconfig.yaml
+.kube/
+
+# === Helm ===
+**/charts/*.tgz
+**/Chart.lock
+
+# === Environment / secrets ===
+.env
+.env.*
+!.env.example
+secrets/
+*.secret
+
+# === OS / editor ===
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Logs ===
+*.log
+logs/
+
+# === Local scratch ===
+scratch/
+tmp/
+.local/
