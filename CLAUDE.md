@@ -10,13 +10,24 @@ The owner is a senior Jenkins platform engineer at Mastercard. He already runs J
 2. At least one managed controller in active-active HA (2 replicas) behind that OC
 3. All Jenkins/CBCI configuration managed via CasC bundles — no UI clicking
 4. Ephemeral pod-based build agents running on a separate Karpenter node pool
-5. Owner understands every piece well enough to explain it in an interview
+5. Entra ID SAML SSO with group-based RBAC
+6. Owner understands every piece well enough to explain it in an interview
 
-## Split of responsibilities
-- **Claude Code does**: VPC, EKS cluster, Karpenter, EFS, cluster add-ons, IAM/IRSA boilerplate, Helm chart install boilerplate, backup wiring, DNS/TLS plumbing.
-- **Human (owner) does by hand**: writing the CasC bundles, enabling HA, running the first builds, secrets/SSO configuration, failover drills, interpreting observability data.
+## Execution model
+Claude Code implements every phase end-to-end — AWS infrastructure, Helm, CBCI CasC bundles, HA enablement, SSO, secrets, backup, observability, and DR drills.
 
-When a phase is marked 🛑 HUMAN, Claude Code must STOP and wait for the owner to complete it. Do not proceed past a 🛑 gate without explicit approval in chat.
+The owner approves plans before state-changing actions and reviews results. The owner does not hand-write CasC YAML, Terraform, or Helm values — Claude Code writes all of it.
+
+Gates between phases:
+1. Claude Code summarizes what it's about to do and why
+2. Owner approves with "proceed" or gives corrections
+3. Claude Code executes (terraform plan → terraform apply on approval, helm install, kubectl apply, etc.)
+4. Claude Code verifies the result, prints what was created, commits, pushes
+5. Claude Code proposes the next phase
+
+The owner is always in the loop for plan approval but is not required to write code or run commands themselves.
+
+At Phase 12a the owner clicks through the Entra admin UI for tenant-side setup (Enterprise Application creation, group creation, user assignment) because that cannot be automated from CBCI. Claude Code provides the exact click-path, values, and does all the CBCI-side configuration.
 
 ## Environment
 - AWS account: personal sandbox (account ID in `.env.local`, not committed)
@@ -39,7 +50,8 @@ When a phase is marked 🛑 HUMAN, Claude Code must STOP and wait for the owner 
 | Ingress | AWS Load Balancer Controller with ALB | AWS-native, WAF-ready, ACM integration |
 | DNS | Route 53 + ExternalDNS | Auto records from Ingress |
 | TLS | ACM certificate (DNS-validated) | Free, auto-renewing |
-| Identity/SSO | Deferred — local admin first, Entra ID/Okta SSO later | Keep Phase 1 unblocked |
+| Identity/SSO | Microsoft Entra ID (owner's personal tenant), SAML 2.0, group-based RBAC | Mirrors Mastercard production pattern; SAML preferred over OIDC for CBCI active-active HA compatibility; local admin first, SSO added in Phase 12a |
+| SAML plugin | Jenkins SAML Plugin (not the Azure AD plugin) | More portable, better-documented, easier to swap IdPs later |
 | Secrets | AWS Secrets Manager + External Secrets Operator | No static creds in Git |
 | Backup | AWS Backup for EFS + Velero for K8s resources | Two layers, both required |
 | Observability | kube-prometheus-stack + Fluent Bit → CloudWatch | Free, industry-standard |
@@ -54,7 +66,7 @@ When a phase is marked 🛑 HUMAN, Claude Code must STOP and wait for the owner 
 6. **Profile discipline.** All AWS commands must use `--profile cbci-lab` or rely on `AWS_PROFILE=cbci-lab` being set.
 7. **Pin versions.** Providers, Helm charts, Karpenter, EKS, add-ons must have pinned versions — no `latest`.
 8. **Idempotency.** All scripts and TF must be safe to re-run.
-9. **Stop at every 🛑 HUMAN gate.** Do not continue past a gate without the owner saying "proceed" in chat.
+9. **Summarize plans before state-changing actions.** Get "proceed" approval before terraform apply, helm install, or any resource creation.
 10. **Ask before deviating.** If a decision above looks wrong based on what you discover, stop and ask.
 
 ## How to start a session

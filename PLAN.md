@@ -49,7 +49,7 @@ Gate: owner approves "proceed."
 
 ---
 
-## Phase 5 — EFS filesystem + StorageClass [NEXT]
+## Phase 5 — EFS filesystem + StorageClass [DONE]
 Claude Code does:
 - Write `terraform/30-storage/`:
   - KMS key with rotation enabled
@@ -66,7 +66,7 @@ Gate: owner approves "proceed."
 
 ---
 
-## Phase 6 — Ingress, DNS, TLS
+## Phase 6 — Ingress, DNS, TLS [NEXT]
 Claude Code does:
 - Install AWS Load Balancer Controller via Helm with IRSA (pinned version)
 - If owner has a domain: install ExternalDNS via Helm with IRSA, pointing at Route 53 hosted zone. If no domain: skip ExternalDNS, use raw ALB hostnames.
