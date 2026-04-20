@@ -9,7 +9,7 @@ Project scaffold, .gitignore, README, CLAUDE.md, PLAN.md, folder structure, pre-
 
 ---
 
-## Phase 1 — Terraform remote state [NEXT]
+## Phase 1 — Terraform remote state [DONE]
 Claude Code does:
 - Write `terraform/00-bootstrap/main.tf`: S3 bucket `cbci-lab-tfstate-<accountId>` (versioning, encryption, public access block) and DynamoDB table `cbci-lab-tf-locks`
 - `terraform init` + `terraform plan` (show plan to owner)
@@ -20,7 +20,7 @@ Gate: owner verifies bucket and table exist in AWS Console.
 
 ---
 
-## Phase 2 — VPC + networking
+## Phase 2 — VPC + networking [NEXT]
 Claude Code does:
 - Write `terraform/10-network/`:
   - Use `terraform-aws-modules/vpc/aws` v5.x
