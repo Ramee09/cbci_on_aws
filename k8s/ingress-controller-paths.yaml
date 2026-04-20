@@ -1,0 +1,28 @@
+---
+# Joins the OC ALB (group: cbci-oc) to route /devflow traffic to the devflow service.
+# Add one stanza per managed controller as they are provisioned.
+# Apply with: kubectl apply -f k8s/ingress-controller-paths.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: controller-paths
+  namespace: cloudbees
+  annotations:
+    alb.ingress.kubernetes.io/group.name: cbci-oc
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/tags: "Project=cbci-lab,ManagedBy=helm"
+    alb.ingress.kubernetes.io/success-codes: "200,302,401"
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /devflow
+            pathType: Prefix
+            backend:
+              service:
+                name: devflow
+                port:
+                  number: 80

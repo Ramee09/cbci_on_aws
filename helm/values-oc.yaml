@@ -63,6 +63,7 @@ OperationsCenter:
       alb.ingress.kubernetes.io/target-type: ip
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
       alb.ingress.kubernetes.io/tags: "Project=cbci-lab,ManagedBy=helm"
+      alb.ingress.kubernetes.io/group.name: cbci-oc
       alb.ingress.kubernetes.io/healthcheck-path: /cjoc/login
       alb.ingress.kubernetes.io/success-codes: "200,302"
     tls:

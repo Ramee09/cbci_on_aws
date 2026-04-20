@@ -16,5 +16,5 @@ jenkins:
 
 unclassified:
   location:
-    url: "http://k8s-cloudbee-cjoc-067a804de0-1896209696.us-east-1.elb.amazonaws.com/cjoc/"
+    url: "http://k8s-cbcioc-4693f87707-1207544431.us-east-1.elb.amazonaws.com/cjoc/"
     adminAddress: ""
