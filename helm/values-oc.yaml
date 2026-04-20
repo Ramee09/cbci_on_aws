@@ -1,0 +1,41 @@
+OperationsCenter:
+  Platform: standard
+
+  # Schedule OC on the Karpenter controllers NodePool (on-demand, t3.large/xlarge)
+  NodeSelector:
+    role: controller
+
+  Resources:
+    Requests:
+      Cpu: "1"
+      Memory: 2G
+    Limits:
+      Cpu: "2"
+      Memory: 4G
+
+  ServiceType: ClusterIP
+
+  # No hostname — ALB auto-assigns a DNS name. Set JenkinsRootURL via CasC in Phase 8.
+  HostName: null
+
+  Ingress:
+    Class: alb
+    Annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+      alb.ingress.kubernetes.io/tags: "Project=cbci-lab,ManagedBy=helm"
+      alb.ingress.kubernetes.io/healthcheck-path: /cjoc/login
+      alb.ingress.kubernetes.io/success-codes: "200,302"
+    tls:
+      Enable: false
+
+Agents:
+  SeparateNamespace:
+    Enabled: false
+
+# EFS-backed home directory for OC
+Persistence:
+  StorageClass: efs-ap
+  AccessMode: ReadWriteOnce
+  Size: 20Gi

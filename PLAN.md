@@ -78,7 +78,7 @@ Gate: owner approves "proceed" (confirming whether a domain is in use).
 
 ---
 
-## Phase 7 — CBCI install: Operations Center [NEXT]
+## Phase 7 — CBCI install: Operations Center [DONE]
 Claude Code does:
 - Add CloudBees Helm repo, pin chart version
 - Write `helm/values-base.yaml` — OC only (controllers come in Phase 9), EFS storage, ALB ingress, resource requests/limits, IRSA-annotated ServiceAccount
@@ -95,7 +95,7 @@ Gate: owner visits OC URL, confirms it loads, approves "proceed."
 
 ---
 
-## Phase 8 — OC CasC bundle (ConfigMap delivery)
+## Phase 8 — OC CasC bundle (ConfigMap delivery) [NEXT]
 Claude Code does:
 - Write `casc/oc-bundle/bundle.yaml` — id, version, description
 - Write `casc/oc-bundle/jenkins.yaml` — local admin security realm (SSO comes in 12a), authorization strategy
