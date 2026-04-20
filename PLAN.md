@@ -36,7 +36,7 @@ Gate: owner sees VPC in Console.
 
 ---
 
-## Phase 3 — EKS cluster + system node group [NEXT]
+## Phase 3 — EKS cluster + system node group [DONE]
 Claude Code does:
 - Write `terraform/20-eks/`:
   - Use `terraform-aws-modules/eks/aws` v20.x
@@ -53,7 +53,7 @@ Gate: owner sees cluster healthy.
 
 ---
 
-## Phase 4 — Karpenter + workload NodePools
+## Phase 4 — Karpenter + workload NodePools [NEXT]
 Claude Code does:
 - IAM roles for Karpenter node + controller (with IRSA)
 - Install Karpenter via Helm, pinned version
