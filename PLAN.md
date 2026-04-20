@@ -20,7 +20,7 @@ Gate: owner verifies bucket and table exist in AWS Console.
 
 ---
 
-## Phase 2 — VPC + networking [NEXT]
+## Phase 2 — VPC + networking [DONE]
 Claude Code does:
 - Write `terraform/10-network/`:
   - Use `terraform-aws-modules/vpc/aws` v5.x
@@ -36,7 +36,7 @@ Gate: owner sees VPC in Console.
 
 ---
 
-## Phase 3 — EKS cluster + system node group
+## Phase 3 — EKS cluster + system node group [NEXT]
 Claude Code does:
 - Write `terraform/20-eks/`:
   - Use `terraform-aws-modules/eks/aws` v20.x
