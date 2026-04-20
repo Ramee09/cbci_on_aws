@@ -1,0 +1,8 @@
+id: "test1"
+version: "1"
+apiVersion: 1
+description: "Test1 managed controller CasC bundle"
+jcasc:
+  - "jenkins.yaml"
+items:
+  - "items.yaml"
