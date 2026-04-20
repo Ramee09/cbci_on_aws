@@ -1,6 +1,8 @@
 id: "oc-bundle"
-version: "8"
+version: "9"
 apiVersion: 1
 description: "Operations Center CasC bundle — managed via ConfigMap"
 jcasc:
   - "jenkins.yaml"
+items:
+  - "items.yaml"

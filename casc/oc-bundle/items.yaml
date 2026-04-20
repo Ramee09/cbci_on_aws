@@ -7,6 +7,21 @@ items:
     displayName: "DevFlow"
     properties:
       - class: com.cloudbees.opscenter.server.properties.SlaveAgentPortProperty
+      - class: com.cloudbees.opscenter.server.properties.ConnectedMasterLicenseServerProperty
+      - class: com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
+        disk: 20
+        memory: 2048
+        cpus: 1.0
+        fsGroup: "1000"
+        storageClassName: "efs-ap"
+        nodeSelector: "role=controller"
+
+  - kind: managedMaster
+    name: "test1"
+    displayName: "Test1"
+    properties:
+      - class: com.cloudbees.opscenter.server.properties.SlaveAgentPortProperty
+      - class: com.cloudbees.opscenter.server.properties.ConnectedMasterLicenseServerProperty
       - class: com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
         disk: 20
         memory: 2048
