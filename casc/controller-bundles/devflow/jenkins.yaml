@@ -13,11 +13,6 @@ jenkins:
           - name: "default"
             label: "default-agent"
             nodeSelector: "role=agent"
-            tolerations:
-              - key: "workload"
-                operator: "Equal"
-                value: "agents"
-                effect: "NoSchedule"
             containers:
               - name: "jnlp"
                 image: "cloudbees/cloudbees-agent:latest"

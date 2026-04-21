@@ -1,0 +1,7 @@
+plugins: []
+# CloudBees CI managed controller image ships 135 plugins via the envelope.
+# List additional plugins here as phases require them, e.g.:
+#   - id: blueocean
+#   - id: github
+#   Phase 12a: saml plugin for SSO
+#   Phase 12b: aws-secrets-manager-credentials-provider

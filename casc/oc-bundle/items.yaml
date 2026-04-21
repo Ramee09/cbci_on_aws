@@ -1,3 +1,11 @@
+# NOTE: This file is NOT referenced in bundle.yaml.
+# Including items.yaml in the OC bundle causes CasCInvalidKindException on OC restart
+# (managedMaster kind not found in registry — CBCI 2.555.x behavior on pod restart).
+#
+# Controllers are provisioned via OC UI/Groovy and persist on EFS.
+# javaOptions pointing to /var/jenkins_home/casc-bundle is set in OC's config.xml.
+#
+# Keep this file as reference for the intended CasC definition.
 removeStrategy:
   rbac: SYNC
   items: SYNC
@@ -15,6 +23,8 @@ items:
         fsGroup: "1000"
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
+        javaOptions: >-
+          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
 
   - kind: managedMaster
     name: "test1"
@@ -29,3 +39,5 @@ items:
         fsGroup: "1000"
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
+        javaOptions: >-
+          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle

@@ -1,0 +1,3 @@
+plugins: []
+# CloudBees CI managed controller image ships 135 plugins via the envelope.
+# List additional plugins here as phases require them.
