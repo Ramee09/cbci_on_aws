@@ -97,6 +97,15 @@ helm upgrade --install cbci cloudbees/cloudbees-core \
   --wait --timeout 10m
 
 echo ""
+echo "=== 7b. Fix controller networking (idempotent) ==="
+# Managed controllers inherit MASTER_ENDPOINT from the OC at provisioning time.
+# If controllers were provisioned before the HTTPS migration (or restored from a
+# pre-HTTPS Velero backup), their Deployments carry the old HTTP/ALB endpoint.
+# This script patches those Deployments to the correct HTTPS/custom-domain values.
+# Safe to run on a fresh install where controllers don't exist yet (no-op).
+bash scripts/fix-controller-networking.sh
+
+echo ""
 echo "=== 8. Velero (backup) ==="
 helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts 2>/dev/null || true
 helm upgrade --install velero vmware-tanzu/velero \

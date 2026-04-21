@@ -1,24 +1,29 @@
 # NOTE: This file is NOT referenced in bundle.yaml.
-# Including items.yaml in the OC bundle causes CasCInvalidKindException on OC pod restart
-# (managedMaster kind not found in registry — CBCI 2.555.x behavior on pod restart).
 #
-# Controllers are provisioned via OC UI/Groovy and persist on EFS.
-# After provisioning a new controller, run this Groovy snippet on OC to set replication:
+# Known issue: including items.yaml in the OC CasC bundle causes
+# CasCInvalidKindException on OC pod restart (CBCI 2.555.x — managedMaster
+# kind not registered at CasC load time). Controllers persist on EFS and
+# reconnect to OC on startup without items.yaml being applied.
 #
-#   import com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
-#   import com.cloudbees.masterprovisioning.kubernetes.Replication
-#   def mm = jenkins.model.Jenkins.get().getItem("<name>")
-#   def config = mm.getConfiguration()
-#   config.replication = new Replication(2, 4, 70)   // replicas, maxReplicas, targetCPU%
-#   config.javaOptions = "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
-#   mm.configuration = config
-#   mm.save()
-#   mm.rollingRestartAction()
+# This file serves two purposes:
+#   1. Source of truth for how controllers should be configured on a fresh build.
+#   2. Applied ONCE via scripts/bootstrap.sh (after OC is fully up) to provision
+#      controllers when building from scratch.
 #
-# Standard values: replicas=2 (active-active HA), maxReplicas=4, targetCPU=70
+# Networking notes:
+#   The OC injects MASTER_ENDPOINT and com.cloudbees.networking.* JVM flags into
+#   each controller Deployment at provisioning time, derived from the OC's own
+#   networking config (values-oc.yaml: protocol=https, hostname=cjoc.myhomettbros.com,
+#   useSubdomain=false). Do NOT put networking flags in javaOptions here — the OC
+#   sets them automatically. Only put CBCI-specific flags that the OC does not inject.
+#
+#   If controllers were provisioned with wrong networking settings (e.g., pre-HTTPS
+#   or after a DR restore from a pre-HTTPS backup), run:
+#     bash scripts/fix-controller-networking.sh
+#   This patches existing Deployments and is idempotent.
 removeStrategy:
   rbac: SYNC
-  items: SYNC
+  items: NONE
 items:
   - kind: managedMaster
     name: "devflow"
