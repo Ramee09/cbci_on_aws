@@ -1,11 +1,21 @@
 # NOTE: This file is NOT referenced in bundle.yaml.
-# Including items.yaml in the OC bundle causes CasCInvalidKindException on OC restart
+# Including items.yaml in the OC bundle causes CasCInvalidKindException on OC pod restart
 # (managedMaster kind not found in registry — CBCI 2.555.x behavior on pod restart).
 #
 # Controllers are provisioned via OC UI/Groovy and persist on EFS.
-# javaOptions pointing to /var/jenkins_home/casc-bundle is set in OC's config.xml.
+# After provisioning a new controller, run this Groovy snippet on OC to set replication:
 #
-# Keep this file as reference for the intended CasC definition.
+#   import com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
+#   import com.cloudbees.masterprovisioning.kubernetes.Replication
+#   def mm = jenkins.model.Jenkins.get().getItem("<name>")
+#   def config = mm.getConfiguration()
+#   config.replication = new Replication(2, 4, 70)   // replicas, maxReplicas, targetCPU%
+#   config.javaOptions = "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
+#   mm.configuration = config
+#   mm.save()
+#   mm.rollingRestartAction()
+#
+# Standard values: replicas=2 (active-active HA), maxReplicas=4, targetCPU=70
 removeStrategy:
   rbac: SYNC
   items: SYNC
@@ -25,6 +35,10 @@ items:
         nodeSelector: "role=controller"
         javaOptions: >-
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
+        replication:
+          replicas: 2
+          maxReplicas: 4
+          targetCPUUtilizationPercentage: 70
 
   - kind: managedMaster
     name: "test1"
@@ -41,3 +55,7 @@ items:
         nodeSelector: "role=controller"
         javaOptions: >-
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
+        replication:
+          replicas: 2
+          maxReplicas: 4
+          targetCPUUtilizationPercentage: 70
