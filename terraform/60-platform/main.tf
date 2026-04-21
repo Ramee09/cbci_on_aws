@@ -412,6 +412,31 @@ resource "aws_secretsmanager_secret" "grafana_admin" {
 }
 
 # ---------------------------------------------------------------------------
+# CI automation API token for bootstrap scripts
+# The token value is auto-generated; scripts read it from Secrets Manager.
+# The SHA-256 hash is what Jenkins stores in the user's config.xml —
+# Terraform computes it so the hash and plaintext are always in sync.
+# ---------------------------------------------------------------------------
+resource "random_password" "jenkins_api_token" {
+  length  = 32
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "jenkins_api_token" {
+  name        = "cbci-lab/jenkins-api-token"
+  description = "CBCI OC automation API token — used by bootstrap scripts, never by humans"
+  tags        = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "jenkins_api_token" {
+  secret_id = aws_secretsmanager_secret.jenkins_api_token.id
+  secret_string = jsonencode({
+    token = random_password.jenkins_api_token.result
+    hash  = sha256(random_password.jenkins_api_token.result)
+  })
+}
+
+# ---------------------------------------------------------------------------
 # IAM role: ExternalDNS → Route 53   (closes gap from Phase 6)
 # ---------------------------------------------------------------------------
 resource "aws_iam_role" "external_dns" {

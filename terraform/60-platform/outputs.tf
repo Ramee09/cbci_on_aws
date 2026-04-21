@@ -42,3 +42,8 @@ output "grafana_admin_secret_arn" {
   description = "Secrets Manager ARN for Grafana admin credentials"
   value       = aws_secretsmanager_secret.grafana_admin.arn
 }
+
+output "jenkins_api_token_secret_arn" {
+  description = "Secrets Manager ARN for CBCI automation API token"
+  value       = aws_secretsmanager_secret.jenkins_api_token.arn
+}

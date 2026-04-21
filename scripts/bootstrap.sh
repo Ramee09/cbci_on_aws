@@ -1,35 +1,52 @@
 #!/usr/bin/env bash
-# bootstrap.sh — install all Helm charts and apply k8s manifests from scratch
+# bootstrap.sh — fully automated end-to-end platform setup
 #
-# Run AFTER all Terraform modules (00 through 60) have been applied.
-# Idempotent: uses `helm upgrade --install` and `kubectl apply`.
+# Prerequisites: ALL Terraform modules (00 through 60) must be applied first.
+#   make apply ENV=dev   OR   run terraform apply in each module in order.
 #
-# Usage: AWS_PROFILE=cbci-lab bash scripts/bootstrap.sh
+# Zero manual steps: everything is code. No Script Console, no UI clicking,
+# no manual kubectl exec required.
+#
+# Idempotent: safe to re-run at any point (helm upgrade --install, kubectl apply).
+#
+# Usage: AWS_PROFILE=cbci-lab bash scripts/bootstrap.sh [ENV]
+#   ENV defaults to "dev"
 
 set -euo pipefail
 
-CLUSTER=cbci-lab
-REGION=us-east-1
-ACCOUNT_ID=835090871306
+ENV="${1:-dev}"
 
-echo "=== Updating kubeconfig ==="
-aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION"
+# ── Load environment config ─────────────────────────────────────────────────
+ENV_FILE="environments/${ENV}/env.sh"
+if [[ -f "${ENV_FILE}" ]]; then
+  # shellcheck source=/dev/null
+  source "${ENV_FILE}"
+fi
+
+CLUSTER="${CLUSTER:-cbci-lab}"
+REGION="${REGION:-us-east-1}"
+OC_HOSTNAME="${OC_HOSTNAME:-cjoc.myhomettbros.com}"
+CBCI_CHART_VERSION="${CBCI_CHART_VERSION:-3.36486.0+0e91c42e72db}"
+
+echo "=========================================="
+echo " CBCI on AWS — Bootstrap (ENV=${ENV})"
+echo "=========================================="
+echo ""
+
+echo "=== 0. Pre-flight: CasC bundle validation ==="
+bash scripts/validate-casc.sh casc
 
 echo ""
-echo "=== 1. Namespaces ==="
+echo "=== 1. Kubeconfig ==="
+aws eks update-kubeconfig --name "${CLUSTER}" --region "${REGION}"
+
+echo ""
+echo "=== 2. Namespaces ==="
 kubectl apply -f k8s/namespaces.yaml
 
 echo ""
-echo "=== 2. StorageClass (EFS) ==="
+echo "=== 3. StorageClass (EFS) ==="
 kubectl apply -f k8s/storageclass-efs.yaml
-
-echo ""
-echo "=== 3. Karpenter NodePools + EC2NodeClass ==="
-# Already managed by terraform/40-addons via null_resource — skip if TF applied.
-# Manual re-apply if needed:
-# kubectl apply -f k8s/karpenter/ec2nodeclass.yaml
-# kubectl apply -f k8s/karpenter/nodepool-controllers.yaml
-# kubectl apply -f k8s/karpenter/nodepool-agents.yaml
 
 echo ""
 echo "=== 4. External Secrets Operator ==="
@@ -42,15 +59,22 @@ helm upgrade --install external-secrets external-secrets/external-secrets \
 
 kubectl apply -f k8s/eso-cluster-secret-store.yaml
 
-# Secrets must exist in Secrets Manager before applying ExternalSecrets
-# Run: aws secretsmanager put-secret-value --secret-id cbci-lab/jenkins-admin-password \
-#        --secret-string '{"password":"<value>"}' --profile cbci-lab
-# Run: aws secretsmanager put-secret-value --secret-id cbci-lab/grafana-admin-password \
-#        --secret-string '{"username":"admin","password":"<value>"}' --profile cbci-lab
+# All secrets created by Terraform (terraform/60-platform) — no manual seeding.
+# Secrets Manager: jenkins-admin-password, grafana-admin-password, jenkins-api-token
+# ESO syncs them to Kubernetes secrets automatically.
 kubectl apply -f k8s/eso-external-secrets.yaml
 
+echo "  Waiting for jenkins-admin-secret and jenkins-api-token-secret to sync..."
+kubectl wait --for=condition=Ready externalsecret/jenkins-admin-password \
+  -n cloudbees --timeout=120s
+kubectl wait --for=condition=Ready externalsecret/jenkins-api-token \
+  -n cloudbees --timeout=120s || {
+    echo "  WARNING: jenkins-api-token ExternalSecret not ready."
+    echo "  Ensure terraform/60-platform has been applied (creates cbci-lab/jenkins-api-token)."
+  }
+
 echo ""
-echo "=== 5. kube-prometheus-stack (monitoring) ==="
+echo "=== 4. kube-prometheus-stack (monitoring) ==="
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
@@ -59,7 +83,7 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
   --wait --timeout 10m
 
 echo ""
-echo "=== 6. Fluent Bit (CloudWatch log shipping) ==="
+echo "=== 5. Fluent Bit (CloudWatch log shipping) ==="
 helm repo add fluent https://fluent.github.io/helm-charts 2>/dev/null || true
 helm upgrade --install fluent-bit fluent/fluent-bit \
   --namespace monitoring \
@@ -68,14 +92,13 @@ helm upgrade --install fluent-bit fluent/fluent-bit \
   --wait --timeout 5m
 
 echo ""
-echo "=== 7. CloudBees CI — Operations Center ==="
+echo "=== 6. CloudBees CI — Operations Center ==="
 helm repo add cloudbees https://public-charts.artifacts.cloudbees.com/repository/public 2>/dev/null || true
 
-# Apply RBAC for GitHub Actions (needed before OC pod starts)
+# RBAC for GitHub Actions casc-bundle-updater role
 kubectl apply -f k8s/rbac-github-actions.yaml
 
-# Seed the CasC bundle ConfigMap
-# Version is stamped by GitHub Actions on every push; seed it at "0" for a fresh install.
+# Seed OC CasC ConfigMap (items.yaml excluded — controllers provisioned via API in step 7)
 kubectl create configmap oc-casc-bundle \
   --from-file=casc/oc-bundle/bundle.yaml \
   --from-file=casc/oc-bundle/jenkins.yaml \
@@ -83,27 +106,34 @@ kubectl create configmap oc-casc-bundle \
   --namespace cloudbees \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Verify the jenkins-admin-secret is synced before installing OC
-kubectl wait --for=condition=Ready externalsecret/jenkins-admin-password \
-  -n cloudbees --timeout=120s || true
+# Repair EFS bundle cache if OC is in CrashLoopBackOff from a previous bad apply.
+# CBCI caches the active bundle to EFS at /var/jenkins_home/core-casc-bundle/; a
+# bad ConfigMap applied previously can leave a stale file that causes crash-loops.
+# The repair pod overwrites it with the current (validated) ConfigMap content.
+OC_STATUS=$(kubectl get pod cjoc-0 -n cloudbees --no-headers 2>/dev/null | awk '{print $3}')
+if [[ "${OC_STATUS}" == "CrashLoopBackOff" || "${OC_STATUS}" == "Error" ]]; then
+  echo "  OC is in ${OC_STATUS} — repairing EFS bundle cache before helm upgrade..."
+  bash scripts/repair-oc-efs-bundle.sh
+fi
 
-# Get current chart version: helm search repo cloudbees/cloudbees-core --versions | head -5
-# Confirm with: helm list -n cloudbees
-CBCI_CHART_VERSION="3.36486.0+0e91c42e72db"  # verified: helm list -n cloudbees 2026-04-21
 helm upgrade --install cbci cloudbees/cloudbees-core \
   --namespace cloudbees \
-  --version "$CBCI_CHART_VERSION" \
+  --version "${CBCI_CHART_VERSION}" \
   --values helm/values-oc.yaml \
   --wait --timeout 10m
 
 echo ""
-echo "=== 7b. Fix controller networking (idempotent) ==="
-# Managed controllers inherit MASTER_ENDPOINT from the OC at provisioning time.
-# If controllers were provisioned before the HTTPS migration (or restored from a
-# pre-HTTPS Velero backup), their Deployments carry the old HTTP/ALB endpoint.
-# This script patches those Deployments to the correct HTTPS/custom-domain values.
-# Safe to run on a fresh install where controllers don't exist yet (no-op).
-bash scripts/fix-controller-networking.sh
+echo "=== 6b. CI automation API token (one-time, idempotent) ==="
+# Injects the API token from Secrets Manager into admin's config.xml on EFS.
+# Required for provision-controllers.sh to authenticate. No restart needed.
+bash scripts/setup-api-token.sh
+
+echo ""
+echo "=== 7. Controller provisioning (replaces ALL Script Console steps) ==="
+# Provisions devflow and test1 managed controllers via CBCI REST API.
+# Idempotent — checks existence before creating.
+# No Groovy, no Script Console, no manual kubectl exec.
+bash scripts/provision-controllers.sh
 
 echo ""
 echo "=== 8. Velero (backup) ==="
@@ -115,13 +145,33 @@ helm upgrade --install velero vmware-tanzu/velero \
   --wait --timeout 5m
 
 echo ""
-echo "=== Done ==="
-echo "OC URL: https://cjoc.myhomettbros.com/cjoc/"
-echo "Grafana: kubectl port-forward svc/kube-prometheus-stack-grafana 3000:3000 -n monitoring"
+echo "=== 9. Controller CasC bundles ==="
+# Seed each controller's CasC bundle ConfigMap.
+# Controllers mount these via InitContainer (same pattern as OC bundle).
+for CTRL in devflow test1; do
+  if kubectl get deployment "${CTRL}" -n cloudbees &>/dev/null; then
+    kubectl create configmap "${CTRL}-casc-bundle" \
+      --from-file=casc/controller-bundles/"${CTRL}"/ \
+      --namespace cloudbees \
+      --dry-run=client -o yaml | kubectl apply -f -
+    echo "  ${CTRL} CasC bundle ConfigMap applied."
+  else
+    echo "  ${CTRL} not yet provisioned — bundle will be applied on next bootstrap run."
+  fi
+done
+
 echo ""
-echo "NOTE: ExternalDNS is managed by terraform/60-platform (helm_release.external_dns)."
-echo "      Run 'terraform apply' in terraform/60-platform/ to install it."
+echo "=========================================="
+echo " Bootstrap complete"
+echo "=========================================="
 echo ""
-echo "NOTE: terraform/60-platform also installs ExternalDNS. After applying, delete the"
-echo "      existing manual Route 53 A records for cjoc/devflow/test1 — ExternalDNS"
-echo "      will recreate them automatically from Ingress annotations."
+echo "  OC:      https://${OC_HOSTNAME}/cjoc/"
+echo "  devflow: https://${OC_HOSTNAME}/devflow/"
+echo "  test1:   https://${OC_HOSTNAME}/test1/"
+echo ""
+echo "  Grafana: kubectl port-forward svc/kube-prometheus-stack-grafana 3000:3000 -n monitoring"
+echo ""
+echo "  Admin credentials: kubectl get secret jenkins-admin-secret -n cloudbees -o jsonpath='{.data.password}' | base64 -d"
+echo ""
+echo "NOTE: ExternalDNS and Secrets Manager secrets are managed by terraform/60-platform."
+echo "      Run 'terraform apply' there before bootstrap if this is a fresh environment."
