@@ -17,20 +17,31 @@ OperationsCenter:
           name: jenkins-admin-secret
           key: password
 
-  # Copy bundle files from ConfigMap (symlink structure) to emptyDir (real files)
-  # cp -L resolves symlinks so CBCI sees only plain YAML — no ..data/ or timestamp dirs
+  # Copy bundle files from ConfigMap (symlink structure) to emptyDir (real files),
+  # then delete the CBCI EFS bundle cache so OC always reads the ConfigMap fresh.
+  #
+  # Why delete the cache: CBCI caches the active bundle to EFS at
+  #   /var/jenkins_home/core-casc-bundle/
+  # and reads from that cache on every restart — ignoring the configured bundle
+  # path (/var/jenkins_casc-real/). Deleting the cache before OC starts forces
+  # it to read the ConfigMap content every time. This eliminates the crash-loop
+  # scenario where a bad cached bundle survives ConfigMap fixes.
   ExtraInitContainers:
     - name: casc-bundle-copy
       image: busybox:1.36
       command:
         - sh
         - -c
-        - "cp -L /var/jenkins_casc-src/* /var/jenkins_casc-real/"
+        - |
+          cp -L /var/jenkins_casc-src/* /var/jenkins_casc-real/
+          rm -rf /var/jenkins_home/core-casc-bundle/
       volumeMounts:
         - name: casc-bundle-src
           mountPath: /var/jenkins_casc-src
         - name: casc-bundle-real
           mountPath: /var/jenkins_casc-real
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
 
   ExtraVolumes:
     - name: casc-bundle-src

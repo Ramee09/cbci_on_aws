@@ -113,15 +113,6 @@ kubectl create configmap oc-casc-bundle \
   --namespace cloudbees \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Repair EFS bundle cache if OC is in CrashLoopBackOff from a previous bad apply.
-# CBCI caches the active bundle to EFS at /var/jenkins_home/core-casc-bundle/; a
-# bad ConfigMap applied previously can leave a stale file that causes crash-loops.
-OC_STATUS=$(kubectl get pod cjoc-0 -n cloudbees --no-headers 2>/dev/null | awk '{print $3}')
-if [[ "${OC_STATUS}" == "CrashLoopBackOff" || "${OC_STATUS}" == "Error" ]]; then
-  echo "  OC is in ${OC_STATUS} — repairing EFS bundle cache before helm upgrade..."
-  bash scripts/repair-oc-efs-bundle.sh
-fi
-
 helm upgrade --install cbci cloudbees/cloudbees-core \
   --namespace cloudbees \
   --version "${CBCI_CHART_VERSION}" \
