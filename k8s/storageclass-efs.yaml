@@ -12,3 +12,9 @@ parameters:
   gidRangeStart: "1000"
   gidRangeEnd: "2000"
   basePath: "/"
+  # Name the EFS access point path after the PVC name instead of a UUID.
+  # Every new controller PVC (e.g. jenkins-home-controller-x-0) automatically
+  # gets a human-readable access point path — no per-controller manifest needed.
+  subPathPattern: "${.PVC.name}"
+  ensureUniqueDirectory: "true"
+  tags: "Project=cbci-lab,kubernetes.io/created-for/pvc/name=${.PVC.name},kubernetes.io/created-for/pvc/namespace=${.PVC.namespace}"
