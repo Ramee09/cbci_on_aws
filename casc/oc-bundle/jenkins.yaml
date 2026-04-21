@@ -16,5 +16,5 @@ jenkins:
 
 unclassified:
   location:
-    url: "http://k8s-cbcioc-4693f87707-1207544431.us-east-1.elb.amazonaws.com/cjoc/"
+    url: "https://cjoc.myhomettbros.com/cjoc/"
     adminAddress: ""

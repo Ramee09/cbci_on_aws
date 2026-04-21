@@ -1,5 +1,5 @@
 id: "devflow"
-version: "5"
+version: "6"
 apiVersion: "1"
 description: "DevFlow managed controller CasC bundle"
 jcasc:

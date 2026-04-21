@@ -61,7 +61,9 @@ OperationsCenter:
     Annotations:
       alb.ingress.kubernetes.io/scheme: internet-facing
       alb.ingress.kubernetes.io/target-type: ip
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: "443"
+      alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:835090871306:certificate/8d0bab7f-cd88-45de-911f-1574b1f3db60"
       alb.ingress.kubernetes.io/tags: "Project=cbci-lab,ManagedBy=helm"
       alb.ingress.kubernetes.io/group.name: cbci-oc
       alb.ingress.kubernetes.io/healthcheck-path: /cjoc/login
