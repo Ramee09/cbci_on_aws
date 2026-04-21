@@ -165,7 +165,7 @@ Pending (Phase 12c): group-based RBAC mapping (cbci-admins OID: a928ae2a-b389-45
 
 ---
 
-## Phase 13 — Backup + DR drill [NEXT]
+## Phase 13 — Backup + DR drill [DONE]
 Claude Code does:
 - Enable AWS Backup plan for EFS filesystem — daily snapshot, 7-day retention
 - Install Velero via Helm with AWS plugin + IRSA, S3 bucket for backups
@@ -179,7 +179,7 @@ Gate: owner approves "proceed."
 
 ---
 
-## Phase 14 — Migrate CasC to SCM (GitOps Bundle Service)
+## Phase 14 — Migrate CasC to SCM (GitOps Bundle Service) [NEXT]
 Claude Code does:
 - Create Git structure for CasC bundles (subdirectory of this repo or separate repo — owner decides)
 - Configure OC Bundle Service to poll the Git source

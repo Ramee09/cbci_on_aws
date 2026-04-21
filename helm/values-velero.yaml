@@ -1,0 +1,54 @@
+## Velero v1.18.0 — Phase 13 Backup + DR
+## Chart: vmware-tanzu/velero v12.0.0
+
+configuration:
+  backupStorageLocation:
+    - name: default
+      provider: aws
+      bucket: cbci-lab-velero-835090871306
+      config:
+        region: us-east-1
+  volumeSnapshotLocation:
+    - name: default
+      provider: aws
+      config:
+        region: us-east-1
+
+serviceAccount:
+  server:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::835090871306:role/cbci-lab-velero"
+
+credentials:
+  useSecret: false
+
+initContainers:
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.12.0
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+
+# Run on controller nodes
+nodeSelector:
+  role: controller
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Daily schedule: backup cloudbees namespace at 2am UTC, keep 7 days
+schedules:
+  cloudbees-daily:
+    disabled: false
+    schedule: "0 2 * * *"
+    useOwnerReferencesInBackup: false
+    template:
+      ttl: "168h"
+      includedNamespaces:
+        - cloudbees
+      storageLocation: default
