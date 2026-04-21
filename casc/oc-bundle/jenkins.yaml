@@ -84,6 +84,15 @@ jenkins:
   globalNodeProperties: []
 
 unclassified:
+  bundleUpdateTiming:
+    automaticReload: true    # hot-reload for JCasC/items changes (no restart needed)
+    automaticRestart: true   # safe-restart when plugin set changes
+    reloadAlwaysOnRestart: true
+    skipNewVersions: false
+    rejectWarnings: false
+  bundleStorageService:
+    activated: true
+    pollingPeriod: 120
   location:
     adminAddress: ''
     url: https://cjoc.myhomettbros.com/cjoc/

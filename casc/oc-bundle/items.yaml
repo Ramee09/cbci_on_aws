@@ -16,36 +16,12 @@ items:
         numExecutors: 0
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
-        javaOptions: "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
         replication:
           replicas: 2
           maxReplicas: 4
           targetCPUUtilizationPercentage: 70
-        # Mount the devflow-casc-bundle ConfigMap via an initContainer (same pattern
-        # as the OC bundle). The initContainer copies ConfigMap files to an emptyDir
-        # at /var/jenkins_home/casc-bundle, shadowing any stale EFS content.
-        # This means git push → GitHub Actions → ConfigMap update → controller reads
-        # new bundle on next pod restart. No kubectl exec, no manual file placement.
-        yaml: |
-          spec:
-            initContainers:
-              - name: casc-bundle-copy
-                image: busybox:1.36
-                command:
-                  - sh
-                  - -c
-                  - "cp -L /casc-src/* /var/jenkins_home/casc-bundle/ && echo 'CasC bundle ready'"
-                volumeMounts:
-                  - name: casc-bundle-src
-                    mountPath: /casc-src
-                  - name: casc-bundle
-                    mountPath: /var/jenkins_home/casc-bundle
-            volumes:
-              - name: casc-bundle-src
-                configMap:
-                  name: devflow-casc-bundle
-              - name: casc-bundle
-                emptyDir: {}
+      - configurationAsCode:
+          bundle: "devflow"
 
   # ── Test1 controller ──────────────────────────────────────────────────────
   - kind: managedMaster
@@ -60,28 +36,9 @@ items:
         numExecutors: 0
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
-        javaOptions: "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
         replication:
           replicas: 2
           maxReplicas: 4
           targetCPUUtilizationPercentage: 70
-        yaml: |
-          spec:
-            initContainers:
-              - name: casc-bundle-copy
-                image: busybox:1.36
-                command:
-                  - sh
-                  - -c
-                  - "cp -L /casc-src/* /var/jenkins_home/casc-bundle/ && echo 'CasC bundle ready'"
-                volumeMounts:
-                  - name: casc-bundle-src
-                    mountPath: /casc-src
-                  - name: casc-bundle
-                    mountPath: /var/jenkins_home/casc-bundle
-            volumes:
-              - name: casc-bundle-src
-                configMap:
-                  name: test1-casc-bundle
-              - name: casc-bundle
-                emptyDir: {}
+      - configurationAsCode:
+          bundle: "test1"

@@ -1,14 +1,27 @@
 OperationsCenter:
   Platform: standard
 
-  # Disabled: we mount the bundle manually via initContainer + emptyDir
-  # to avoid the Kubernetes ConfigMap symlink structure causing validation errors.
+  # SCM Retriever fetches the bundle from GitHub on startup (init container) and
+  # polls every 3 minutes (sidecar). When a new bundle version is detected, OC
+  # reloads automatically via bundleUpdateTiming in jenkins.yaml.
+  # Webhook: https://cjoc.myhomettbros.com/cjoc/casc-retriever/retriever-github-webhook/
+  # Configure that URL in GitHub repo Settings → Webhooks for instant apply on push.
   CasC:
-    Enabled: false
+    Enabled: true
+    Retriever:
+      Enabled: true
+      scmRepo: "https://github.com/Ramee09/cbci_on_aws.git"
+      scmBranch: "main"
+      scmBundlePath: "casc/oc-bundle"
+      scmPollingInterval: "PT3M"
+      githubWebhooksEnabled: true
+      secrets:
+        secretName: casc-retriever-secrets
+        githubWebhookSecret: gh-webhook-secret
 
-  # Point CBCI at the emptyDir where initContainer copied the real files
-  # Set networking to HTTPS so CBCI constructs correct ACS/root URLs for SAML
-  JavaOpts: "-Dcore.casc.config.bundle=/var/jenkins_casc-real -Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.useSubdomain=false"
+  # Networking opts required for SAML SSO to construct correct ACS/root URLs.
+  # core.casc.config.bundle is NOT set — the SCM Retriever manages that path.
+  JavaOpts: "-Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.useSubdomain=false"
 
   ContainerEnv:
     - name: JENKINS_ADMIN_PASSWORD
@@ -17,42 +30,44 @@ OperationsCenter:
           name: jenkins-admin-secret
           key: password
 
-  # Copy bundle files from ConfigMap (symlink structure) to emptyDir (real files),
-  # then delete the CBCI EFS bundle cache so OC always reads the ConfigMap fresh.
-  #
-  # Why delete the cache: CBCI caches the active bundle to EFS at
-  #   /var/jenkins_home/core-casc-bundle/
-  # and reads from that cache on every restart — ignoring the configured bundle
-  # path (/var/jenkins_casc-real/). Deleting the cache before OC starts forces
-  # it to read the ConfigMap content every time. This eliminates the crash-loop
-  # scenario where a bad cached bundle survives ConfigMap fixes.
+  # Two init containers run after the SCM Retriever init container:
+  #   1. clear-casc-cache  — deletes stale OC bundle cache from EFS so a bad
+  #      bundle never survives a restart and causes a crash-loop.
+  #   2. seed-controller-bundles — sparse-clones the repo and copies
+  #      casc/controller-bundles/{devflow,test1}/ into OC's casc-server bundle
+  #      storage ($JENKINS_HOME/casc-server-bundles/). casc-client on each
+  #      controller then pulls the assigned bundle from OC via HTTPS — no
+  #      ConfigMaps or initContainers on the controller pods at all.
   ExtraInitContainers:
-    - name: casc-bundle-copy
+    - name: clear-casc-cache
       image: busybox:1.36
+      command: ["sh", "-c", "rm -rf /var/jenkins_home/core-casc-bundle/ && echo 'EFS bundle cache cleared'"]
+      volumeMounts:
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
+
+    - name: seed-controller-bundles
+      image: alpine/git:2.43.0
       command:
         - sh
         - -c
         - |
-          cp -L /var/jenkins_casc-src/* /var/jenkins_casc-real/
-          rm -rf /var/jenkins_home/core-casc-bundle/
+          set -e
+          DEST="/var/jenkins_home/casc-server-bundles"
+          mkdir -p "${DEST}"
+          git clone --depth=1 --filter=blob:none --sparse \
+            https://github.com/Ramee09/cbci_on_aws.git /tmp/cbci-repo
+          cd /tmp/cbci-repo
+          git sparse-checkout set casc/controller-bundles
+          for d in casc/controller-bundles/*/; do
+            name=$(basename "${d}")
+            mkdir -p "${DEST}/${name}"
+            cp -r "${d}"* "${DEST}/${name}/"
+            echo "Seeded ${name} bundle → ${DEST}/${name}/"
+          done
       volumeMounts:
-        - name: casc-bundle-src
-          mountPath: /var/jenkins_casc-src
-        - name: casc-bundle-real
-          mountPath: /var/jenkins_casc-real
         - name: jenkins-home
           mountPath: /var/jenkins_home
-
-  ExtraVolumes:
-    - name: casc-bundle-src
-      configMap:
-        name: oc-casc-bundle
-    - name: casc-bundle-real
-      emptyDir: {}
-
-  ExtraVolumeMounts:
-    - name: casc-bundle-real
-      mountPath: /var/jenkins_casc-real
 
   # Schedule OC on the Karpenter controllers NodePool (on-demand, t3.large/xlarge)
   NodeSelector:
@@ -69,48 +84,6 @@ OperationsCenter:
   ServiceType: ClusterIP
 
   HostName: null
-
-  # Controller provisioning via Groovy init script.
-  # configure-jenkins.groovy.d/ runs after all plugins are loaded, which is
-  # why this works where items.yaml bundle loading fails (managedMaster kind is
-  # rejected by cloudbees-casc-items-api before plugins finish initialising).
-  # Idempotent: each controller is only created when it does not already exist.
-  ExtraGroovyConfiguration:
-    init-controllers.groovy: |
-      import jenkins.model.Jenkins
-      import com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
-      import com.cloudbees.opscenter.server.model.ManagedMaster
-
-      def oc = Jenkins.getInstance()
-
-      [
-        [name: "devflow", displayName: "DevFlow"],
-        [name: "test1",   displayName: "Test1"],
-      ].each { ctrl ->
-        if (oc.getItem(ctrl.name) != null) {
-          println("[init-controllers] ${ctrl.name}: already exists — skipping")
-          return
-        }
-
-        println("[init-controllers] Creating managed controller: ${ctrl.name}")
-
-        def prov = new KubernetesMasterProvisioning()
-        prov.disk             = 20
-        prov.memory           = 3072
-        prov.cpus             = 1.0d
-        prov.numExecutors     = 0
-        prov.storageClassName = "efs-ap"
-        prov.nodeSelector     = "role=controller"
-        prov.javaOptions      = "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
-
-        def mm = new ManagedMaster(oc, ctrl.name)
-        mm.setConfiguration(prov)
-        oc.add(mm, ctrl.name)
-        mm.save()
-        oc.save()
-
-        println("[init-controllers] ${ctrl.name}: created, OC will provision automatically")
-      }
 
   Ingress:
     Class: alb

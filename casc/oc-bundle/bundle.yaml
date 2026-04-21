@@ -1,13 +1,14 @@
 id: "oc-bundle"
-version: "26"
-apiVersion: 1
-description: "Operations Center CasC bundle — managed via ConfigMap"
+version: "29"
+apiVersion: 2
+description: "Operations Center CasC bundle — fetched from GitHub via SCM Retriever"
 plugins:
   - "plugins.yaml"
 jcasc:
   - "jenkins.yaml"
-# items.yaml is NOT referenced here — CBCI 2.555.x cloudbees-casc-items-api rejects
-# the 'managedMaster' kind with CasCInvalidKindException when processed via bundle.
-# Controllers are instead applied via the CBCI REST API (/cjoc/casc-items/apply)
-# by provision-controllers.sh after OC is ready. items.yaml IS the YAML source of
-# truth; the script is only the delivery mechanism the platform forces us to use.
+items:
+  - "items.yaml"
+# IMPORTANT: increment 'version' whenever you change any bundle file.
+# The SCM Retriever detects new git commits and downloads the new bundle;
+# OC only applies it if the version field is higher than what is currently loaded.
+# The casc-deploy GitHub Actions workflow auto-stamps this value on every push.

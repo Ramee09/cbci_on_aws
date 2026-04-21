@@ -4,8 +4,11 @@
 # Prerequisites: ALL Terraform modules (00 through 60) must be applied first.
 #   make apply ENV=dev   OR   run terraform apply in each module in order.
 #
-# Zero manual steps: everything is code. No Script Console, no UI clicking,
-# no manual kubectl exec required.
+# What this script does NOT do (OC handles it via CasC):
+#   - Controller provisioning  → casc/oc-bundle/items.yaml loaded by SCM Retriever
+#   - Controller CasC config   → casc/controller-bundles/ mounted via initContainer
+#   - Plugin installation      → casc/oc-bundle/plugins.yaml
+#   - OC JCasC config          → casc/oc-bundle/jenkins.yaml
 #
 # Idempotent: safe to re-run at any point (helm upgrade --install, kubectl apply).
 #
@@ -64,6 +67,10 @@ echo "  Waiting for jenkins-admin-secret to sync..."
 kubectl wait --for=condition=Ready externalsecret/jenkins-admin-password \
   -n cloudbees --timeout=120s
 
+echo "  Waiting for casc-retriever-secrets (GitHub PAT) to sync..."
+kubectl wait --for=condition=Ready externalsecret/github-casc-retriever \
+  -n cloudbees --timeout=120s
+
 echo ""
 echo "=== 5. kube-prometheus-stack (monitoring) ==="
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
@@ -83,35 +90,20 @@ helm upgrade --install fluent-bit fluent/fluent-bit \
   --wait --timeout 5m
 
 echo ""
-echo "=== 7. Controller CasC bundle ConfigMaps ==="
-# These ConfigMaps are created BEFORE OC starts so they exist when OC provisions
-# controllers. The OC items.yaml (via KubernetesMasterProvisioning yaml: patch)
-# mounts each controller's ConfigMap via initContainer — no manual kubectl exec.
-for CTRL in devflow test1; do
-  kubectl create configmap "${CTRL}-casc-bundle" \
-    --from-file=casc/controller-bundles/"${CTRL}"/ \
-    --namespace cloudbees \
-    --dry-run=client -o yaml | kubectl apply -f -
-  echo "  ${CTRL}-casc-bundle ConfigMap applied."
-done
-
-echo ""
-echo "=== 8. CloudBees CI — Operations Center ==="
+echo "=== 7. CloudBees CI — Operations Center ==="
 helm repo add cloudbees https://public-charts.artifacts.cloudbees.com/repository/public 2>/dev/null || true
 
-# RBAC for GitHub Actions casc-bundle-updater role
+# RBAC for GitHub Actions
 kubectl apply -f k8s/rbac-github-actions.yaml
 
-# OC CasC bundle ConfigMap — includes items.yaml so OC provisions controllers on startup.
-# apiVersion: 2 in bundle.yaml ensures items are processed after plugins initialize
-# (avoids CasCInvalidKindException that occurs with apiVersion: 1).
-kubectl create configmap oc-casc-bundle \
-  --from-file=casc/oc-bundle/bundle.yaml \
-  --from-file=casc/oc-bundle/jenkins.yaml \
-  --from-file=casc/oc-bundle/plugins.yaml \
-  --from-file=casc/oc-bundle/items.yaml \
-  --namespace cloudbees \
-  --dry-run=client -o yaml | kubectl apply -f -
+# OC startup sequence:
+#   1. SCM Retriever init container — fetches casc/oc-bundle/ from GitHub
+#   2. seed-controller-bundles init container — sparse-clones repo, copies
+#      casc/controller-bundles/ into $JENKINS_HOME/casc-server-bundles/ (OC EFS)
+#   3. clear-casc-cache init container — removes stale OC bundle cache
+#   4. OC starts, loads bundle (plugins, jenkins.yaml, items.yaml)
+#   5. items.yaml provisions devflow + test1 controllers with bundle assignments
+#   6. casc-client on each controller pulls its bundle from OC via HTTPS
 
 helm upgrade --install cbci cloudbees/cloudbees-core \
   --namespace cloudbees \
@@ -119,18 +111,12 @@ helm upgrade --install cbci cloudbees/cloudbees-core \
   --values helm/values-oc.yaml \
   --wait --timeout 10m
 
-echo ""
-echo "=== 8b. CI automation API token (one-time, idempotent) ==="
-# Injects the API token from Secrets Manager into admin's config.xml on EFS.
-# Required for any future API-based automation. Survives pod restarts (lives on EFS).
-bash scripts/setup-api-token.sh
-
-# Controllers are provisioned by the Groovy init script in ExtraGroovyConfiguration
-# (helm/values-oc.yaml). That script runs during OC startup as part of the
-# configure-jenkins.groovy.d/ phase — no REST API, no post-startup step required.
+# OC will now: fetch the bundle from GitHub (SCM Retriever init container),
+# load plugins.yaml + jenkins.yaml + items.yaml, and provision controllers.
+# Monitor: kubectl logs -n cloudbees cjoc-0 -f
 
 echo ""
-echo "=== 9. Velero (backup) ==="
+echo "=== 8. Velero (backup) ==="
 helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts 2>/dev/null || true
 helm upgrade --install velero vmware-tanzu/velero \
   --namespace velero \
@@ -147,12 +133,12 @@ echo "  OC:      https://${OC_HOSTNAME}/cjoc/"
 echo "  devflow: https://${OC_HOSTNAME}/devflow/"
 echo "  test1:   https://${OC_HOSTNAME}/test1/"
 echo ""
-echo "  Controllers are provisioned by OC from casc/oc-bundle/items.yaml."
-echo "  CasC bundles are mounted from ConfigMaps (devflow-casc-bundle, test1-casc-bundle)."
+echo "  Controllers are provisioned automatically by OC from casc/oc-bundle/items.yaml"
+echo "  (SCM Retriever fetches from GitHub on startup, polls every 3 minutes)."
 echo ""
 echo "  Grafana: kubectl port-forward svc/kube-prometheus-stack-grafana 3000:3000 -n monitoring"
 echo ""
 echo "  Admin credentials: kubectl get secret jenkins-admin-secret -n cloudbees -o jsonpath='{.data.password}' | base64 -d"
 echo ""
-echo "NOTE: ExternalDNS and Secrets Manager secrets are managed by terraform/60-platform."
+echo "NOTE: Secrets Manager secrets are managed by terraform/60-platform."
 echo "      Run 'terraform apply' there before bootstrap if this is a fresh environment."

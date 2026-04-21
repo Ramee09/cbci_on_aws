@@ -1,4 +1,4 @@
-# Kubernetes RBAC for GitHub Actions (Phase 14)
+# Kubernetes RBAC for GitHub Actions
 #
 # The IAM role cbci-lab-github-actions is mapped into the cluster via aws-auth:
 #   eksctl create iamidentitymapping \
@@ -6,8 +6,9 @@
 #     --arn arn:aws:iam::835090871306:role/cbci-lab-github-actions \
 #     --username github-actions
 #
-# This Role grants that identity the minimum permissions needed to update
-# the oc-casc-bundle ConfigMap via the casc-deploy GitHub Actions workflow.
+# Controller bundles are now seeded from GitHub via an OC initContainer —
+# no ConfigMap updates needed from CI. This Role is kept minimal (read-only
+# on pods) in case future workflows need cluster introspection.
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -16,9 +17,8 @@ metadata:
   namespace: cloudbees
 rules:
   - apiGroups: [""]
-    resources: ["configmaps"]
-    resourceNames: ["oc-casc-bundle"]
-    verbs: ["get", "create", "patch", "update"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
