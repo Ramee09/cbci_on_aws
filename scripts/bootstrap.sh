@@ -64,25 +64,7 @@ kubectl create secret generic jenkins-admin-secret \
 echo "  jenkins-admin-secret created."
 
 echo ""
-echo "=== 5. kube-prometheus-stack (monitoring) ==="
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
-helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-  --namespace monitoring \
-  --version 83.6.0 \
-  --values helm/values-monitoring.yaml \
-  --wait --timeout 10m
-
-echo ""
-echo "=== 6. Fluent Bit (CloudWatch log shipping) ==="
-helm repo add fluent https://fluent.github.io/helm-charts 2>/dev/null || true
-helm upgrade --install fluent-bit fluent/fluent-bit \
-  --namespace monitoring \
-  --version 0.57.3 \
-  --values helm/values-fluent-bit.yaml \
-  --wait --timeout 5m
-
-echo ""
-echo "=== 7. CloudBees CI — Operations Center ==="
+echo "=== 5. CloudBees CI — Operations Center ==="
 helm repo add cloudbees https://public-charts.artifacts.cloudbees.com/repository/public 2>/dev/null || true
 
 # RBAC for GitHub Actions
@@ -107,7 +89,7 @@ helm upgrade --install cbci cloudbees/cloudbees-core \
 # Monitor: kubectl logs -n cloudbees cjoc-0 -f
 
 echo ""
-echo "=== 8. Velero (backup) ==="
+echo "=== 6. Velero (backup) ==="
 helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts 2>/dev/null || true
 helm upgrade --install velero vmware-tanzu/velero \
   --namespace velero \
@@ -127,9 +109,6 @@ echo ""
 echo "  Controllers are provisioned automatically by OC from casc/oc-bundle/items.yaml"
 echo "  (SCM Retriever fetches from GitHub on startup, polls every 3 minutes)."
 echo ""
-echo "  Grafana: kubectl port-forward svc/kube-prometheus-stack-grafana 3000:3000 -n monitoring"
-echo ""
 echo "  Admin credentials: kubectl get secret jenkins-admin-secret -n cloudbees -o jsonpath='{.data.password}' | base64 -d"
 echo ""
-echo "NOTE: Secrets Manager secrets are managed by terraform/60-platform."
-echo "      Run 'terraform apply' there before bootstrap if this is a fresh environment."
+echo "NOTE: Add cbci-lab/jenkins-admin-password to Secrets Manager before running bootstrap."

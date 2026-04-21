@@ -1,8 +1,3 @@
-output "fluent_bit_role_arn" {
-  description = "IRSA role ARN for Fluent Bit (CloudWatch Logs)"
-  value       = aws_iam_role.fluent_bit.arn
-}
-
 output "velero_role_arn" {
   description = "IRSA role ARN for Velero"
   value       = aws_iam_role.velero.arn

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lab-start.sh — scale EKS system nodes back up
 #
-# CBCI and monitoring pods will reschedule automatically.
+# CBCI pods will reschedule automatically.
 # Allow ~5-10 minutes for all pods to reach Ready.
 
 set -euo pipefail

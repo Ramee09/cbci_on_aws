@@ -98,53 +98,6 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 # ---------------------------------------------------------------------------
-# IAM role: Fluent Bit → CloudWatch Logs   (Phase 11)
-#
-# Import: terraform import aws_iam_role.fluent_bit cbci-lab-fluent-bit
-# ---------------------------------------------------------------------------
-resource "aws_iam_role" "fluent_bit" {
-  name = "cbci-lab-fluent-bit"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Federated = local.oidc_provider_arn }
-      Action    = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "${local.oidc_provider_url}:sub" = "system:serviceaccount:monitoring:fluent-bit"
-          "${local.oidc_provider_url}:aud" = "sts.amazonaws.com"
-        }
-      }
-    }]
-  })
-
-  tags = local.common_tags
-}
-
-resource "aws_iam_role_policy" "fluent_bit_cloudwatch" {
-  name = "fluent-bit-cloudwatch"
-  role = aws_iam_role.fluent_bit.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogStreams",
-        "logs:DescribeLogGroups",
-      ]
-      Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/eks/cbci-lab*"
-    }]
-  })
-}
-
-
-# ---------------------------------------------------------------------------
 # S3 bucket: Velero backup storage   (Phase 13)
 #
 # Import: terraform import aws_s3_bucket.velero cbci-lab-velero-835090871306
