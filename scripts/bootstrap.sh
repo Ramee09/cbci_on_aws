@@ -89,7 +89,7 @@ kubectl wait --for=condition=Ready externalsecret/jenkins-admin-password \
 
 # Get current chart version: helm search repo cloudbees/cloudbees-core --versions | head -5
 # Confirm with: helm list -n cloudbees
-CBCI_CHART_VERSION="3.15555.0.0"  # TODO: verify with `helm list -n cloudbees`
+CBCI_CHART_VERSION="3.36486.0+0e91c42e72db"  # verified: helm list -n cloudbees 2026-04-21
 helm upgrade --install cbci cloudbees/cloudbees-core \
   --namespace cloudbees \
   --version "$CBCI_CHART_VERSION" \
