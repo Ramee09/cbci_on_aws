@@ -93,6 +93,11 @@ unclassified:
   bundleStorageService:
     activated: true
     pollingPeriod: 120
+    scm:
+      scmConfig:
+        remote: "https://github.com/Ramee09/cbci_on_aws.git"
+        branch: "main"
+      bundlesPath: "casc/controller-bundles"
   location:
     adminAddress: ''
     url: https://cjoc.myhomettbros.com/cjoc/

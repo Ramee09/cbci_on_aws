@@ -98,12 +98,11 @@ kubectl apply -f k8s/rbac-github-actions.yaml
 
 # OC startup sequence:
 #   1. SCM Retriever init container — fetches casc/oc-bundle/ from GitHub
-#   2. seed-controller-bundles init container — sparse-clones repo, copies
-#      casc/controller-bundles/ into $JENKINS_HOME/casc-server-bundles/ (OC EFS)
-#   3. clear-casc-cache init container — removes stale OC bundle cache
-#   4. OC starts, loads bundle (plugins, jenkins.yaml, items.yaml)
-#   5. items.yaml provisions devflow + test1 controllers with bundle assignments
-#   6. casc-client on each controller pulls its bundle from OC via HTTPS
+#   2. clear-casc-cache init container — removes stale OC bundle cache from EFS
+#   3. OC starts, loads bundle (plugins, jenkins.yaml, items.yaml)
+#   4. bundleStorageService polls casc/controller-bundles/ from GitHub every 120s
+#   5. items.yaml provisions devflow + test1 with configurationAsCode bundle assignment
+#   6. casc-client on each controller pulls its assigned bundle from OC via HTTPS
 
 helm upgrade --install cbci cloudbees/cloudbees-core \
   --namespace cloudbees \
