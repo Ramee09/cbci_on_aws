@@ -30,21 +30,6 @@ OperationsCenter:
           name: jenkins-admin-secret
           key: password
 
-  # Delete the CBCI EFS bundle cache before OC starts so a stale cache from a
-  # previous bad bundle can never survive a restart and cause a crash-loop.
-  # The retriever's own init container (injected by the chart) runs first and
-  # writes the fresh bundle; this container runs after to clear the EFS cache.
-  #
-  # Controller bundles are NOT seeded here — bundleStorageService in jenkins.yaml
-  # configures OC to pull casc/controller-bundles/ from GitHub directly and poll
-  # every 120 seconds. No initContainer or ConfigMap needed on the controller side.
-  ExtraInitContainers:
-    - name: clear-casc-cache
-      image: busybox:1.36
-      command: ["sh", "-c", "rm -rf /var/jenkins_home/core-casc-bundle/ && echo 'EFS bundle cache cleared'"]
-      volumeMounts:
-        - name: jenkins-home
-          mountPath: /var/jenkins_home
 
   # Schedule OC on the Karpenter controllers NodePool (on-demand, t3.large/xlarge)
   NodeSelector:

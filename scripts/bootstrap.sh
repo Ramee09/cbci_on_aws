@@ -97,12 +97,12 @@ helm repo add cloudbees https://public-charts.artifacts.cloudbees.com/repository
 kubectl apply -f k8s/rbac-github-actions.yaml
 
 # OC startup sequence:
-#   1. SCM Retriever init container — fetches casc/oc-bundle/ from GitHub
-#   2. clear-casc-cache init container — removes stale OC bundle cache from EFS
-#   3. OC starts, loads bundle (plugins, jenkins.yaml, items.yaml)
-#   4. bundleStorageService polls casc/controller-bundles/ from GitHub every 120s
-#   5. items.yaml provisions devflow + test1 with configurationAsCode bundle assignment
-#   6. casc-client on each controller pulls its assigned bundle from OC via HTTPS
+#   1. SCM Retriever init container — fetches casc/oc-bundle/ from GitHub and
+#      directs OC to load from that path (Retriever owns the bundle location)
+#   2. OC starts, loads bundle (plugins, jenkins.yaml, items.yaml)
+#   3. bundleStorageService polls casc/controller-bundles/ from GitHub every 120s
+#   4. items.yaml provisions devflow + test1 with configurationAsCode bundle assignment
+#   5. casc-client on each controller pulls its assigned bundle from OC via HTTPS
 
 helm upgrade --install cbci cloudbees/cloudbees-core \
   --namespace cloudbees \
