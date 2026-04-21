@@ -59,6 +59,48 @@ OperationsCenter:
 
   HostName: null
 
+  # Controller provisioning via Groovy init script.
+  # configure-jenkins.groovy.d/ runs after all plugins are loaded, which is
+  # why this works where items.yaml bundle loading fails (managedMaster kind is
+  # rejected by cloudbees-casc-items-api before plugins finish initialising).
+  # Idempotent: each controller is only created when it does not already exist.
+  ExtraGroovyConfiguration:
+    init-controllers.groovy: |
+      import jenkins.model.Jenkins
+      import com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
+      import com.cloudbees.opscenter.server.model.ManagedMaster
+
+      def oc = Jenkins.getInstance()
+
+      [
+        [name: "devflow", displayName: "DevFlow"],
+        [name: "test1",   displayName: "Test1"],
+      ].each { ctrl ->
+        if (oc.getItem(ctrl.name) != null) {
+          println("[init-controllers] ${ctrl.name}: already exists — skipping")
+          return
+        }
+
+        println("[init-controllers] Creating managed controller: ${ctrl.name}")
+
+        def prov = new KubernetesMasterProvisioning()
+        prov.disk             = 20
+        prov.memory           = 3072
+        prov.cpus             = 1.0d
+        prov.numExecutors     = 0
+        prov.storageClassName = "efs-ap"
+        prov.nodeSelector     = "role=controller"
+        prov.javaOptions      = "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
+
+        def mm = new ManagedMaster(oc, ctrl.name)
+        mm.setConfiguration(prov)
+        oc.add(mm, ctrl.name)
+        mm.save()
+        oc.save()
+
+        println("[init-controllers] ${ctrl.name}: created, OC will provision automatically")
+      }
+
   Ingress:
     Class: alb
     Annotations:

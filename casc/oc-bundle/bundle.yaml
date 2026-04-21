@@ -1,10 +1,13 @@
 id: "oc-bundle"
-version: "25"
+version: "26"
 apiVersion: 1
 description: "Operations Center CasC bundle — managed via ConfigMap"
 plugins:
   - "plugins.yaml"
 jcasc:
   - "jenkins.yaml"
-# items.yaml is NOT included here: managedMaster kind causes CasCInvalidKindException on OC restart
-# Controllers (devflow, test1) persist on EFS and reconnect on OC startup
+# items.yaml is NOT referenced here — CBCI 2.555.x cloudbees-casc-items-api rejects
+# the 'managedMaster' kind with CasCInvalidKindException when processed via bundle.
+# Controllers are instead applied via the CBCI REST API (/cjoc/casc-items/apply)
+# by provision-controllers.sh after OC is ready. items.yaml IS the YAML source of
+# truth; the script is only the delivery mechanism the platform forces us to use.

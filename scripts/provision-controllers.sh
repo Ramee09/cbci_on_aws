@@ -1,39 +1,31 @@
 #!/usr/bin/env bash
 # provision-controllers.sh — idempotent controller provisioning via CBCI REST API
 #
-# Replaces ALL manual Groovy Script Console steps:
-#   - Controller creation (was: items.yaml applied once + Script Console)
-#   - HA replication config (was: Groovy Replication(2,4,70))
-#   - CasC bundle javaOptions (was: Groovy config.javaOptions)
-#   - Rolling restart (was: Groovy mm.rollingRestartAction())
+# Why not bundle items.yaml: cloudbees-casc-items-api in CBCI 2.555.x rejects
+# 'managedMaster' kind with CasCInvalidKindException when processed at bundle
+# load time. The REST API /casc-items/apply uses a different code path that
+# accepts managedMaster after plugins are fully initialised.
 #
-# Why not items.yaml in the OC bundle:
-#   managedMaster kind is not registered at CasC load time in CBCI 2.555.x,
-#   causing CasCInvalidKindException on OC restart. Items applied here via
-#   the REST API succeed because plugins are fully loaded at this point.
+# casc/oc-bundle/items.yaml IS the YAML source of truth — this script is only
+# the delivery mechanism. No Groovy, no Script Console, no UI.
 #
-# Auth: uses the CI automation API token stored in jenkins-api-token-secret
-#   (synced from Secrets Manager by ESO). Token hash is pre-configured on
-#   the admin user via CasC (ADMIN_API_TOKEN_HASH env var in values-oc.yaml).
-#
-# Idempotent: checks if each controller already exists before creating.
-#
-# Usage: bash scripts/provision-controllers.sh
-#        Called automatically from bootstrap.sh after OC is healthy.
+# Idempotent: checks whether each controller already exists before applying.
+# Called automatically by bootstrap.sh after setup-api-token.sh.
 
 set -euo pipefail
 
 NAMESPACE=cloudbees
 OC_URL="https://cjoc.myhomettbros.com/cjoc"
 ADMIN_USER="admin"
+ITEMS_FILE="casc/oc-bundle/items.yaml"
 
-echo "=== Waiting for jenkins-api-token-secret to be synced by ESO ==="
+# ── Wait for API token secret ────────────────────────────────────────────────
+echo "=== Waiting for jenkins-api-token-secret ==="
 for i in $(seq 1 24); do
-  if kubectl get secret jenkins-api-token-secret -n "${NAMESPACE}" &>/dev/null; then
-    echo "  Secret found."
-    break
-  fi
-  echo "  Waiting for ESO to sync jenkins-api-token-secret... (${i}/24)"
+  TOKEN_LEN=$(kubectl get secret jenkins-api-token-secret \
+    -n "${NAMESPACE}" -o jsonpath='{.data.token}' 2>/dev/null | wc -c || echo 0)
+  [[ "${TOKEN_LEN}" -gt 4 ]] && { echo "  Secret ready."; break; }
+  echo "  ESO sync pending (${i}/24)..."
   sleep 5
 done
 
@@ -41,109 +33,89 @@ API_TOKEN=$(kubectl get secret jenkins-api-token-secret \
   -n "${NAMESPACE}" -o jsonpath='{.data.token}' | base64 -d)
 
 if [[ -z "${API_TOKEN}" ]]; then
-  echo "ERROR: jenkins-api-token-secret not found or empty."
-  echo "  Run: terraform apply in terraform/60-platform/ first."
+  echo "ERROR: jenkins-api-token-secret empty. Run terraform apply in 60-platform first."
   exit 1
 fi
 
+# ── Wait for OC API ──────────────────────────────────────────────────────────
 echo ""
-echo "=== Waiting for OC to accept API requests ==="
+echo "=== Waiting for OC API ==="
+HTTP="000"
 for i in $(seq 1 36); do
   HTTP=$(curl -sf -o /dev/null -w "%{http_code}" \
     -u "${ADMIN_USER}:${API_TOKEN}" \
     "${OC_URL}/api/json" 2>/dev/null || echo "000")
-  if [[ "${HTTP}" == "200" ]]; then
-    echo "  OC API ready (HTTP 200)."
-    break
-  fi
-  echo "  OC not ready yet (HTTP ${HTTP})... (${i}/36)"
+  [[ "${HTTP}" == "200" ]] && { echo "  OC API ready."; break; }
+  echo "  HTTP ${HTTP} — waiting (${i}/36)..."
   sleep 10
 done
 
 if [[ "${HTTP}" != "200" ]]; then
-  echo "ERROR: OC API did not become ready after 6 minutes."
-  echo "  Check: kubectl logs -n ${NAMESPACE} cjoc-0"
+  echo "ERROR: OC API not ready after 6 minutes. Check: kubectl logs -n ${NAMESPACE} cjoc-0"
   exit 1
 fi
 
-# Get CSRF crumb (required for POST requests)
+# ── Check if controllers already exist ──────────────────────────────────────
+echo ""
+echo "=== Checking controller state ==="
+MISSING=0
+for CTRL in devflow test1; do
+  STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+    -u "${ADMIN_USER}:${API_TOKEN}" \
+    "${OC_URL}/job/${CTRL}/api/json" 2>/dev/null || echo "000")
+  if [[ "${STATUS}" == "200" ]]; then
+    echo "  ${CTRL}: exists — will reconcile (removeStrategy: NONE, safe)"
+  else
+    echo "  ${CTRL}: not found — will create"
+    MISSING=$((MISSING + 1))
+  fi
+done
+
+# ── Apply items.yaml via CBCI REST API ───────────────────────────────────────
+echo ""
+echo "=== Applying casc/oc-bundle/items.yaml via CBCI CasC items API ==="
 CRUMB=$(curl -sf -u "${ADMIN_USER}:${API_TOKEN}" \
-  "${OC_URL}/crumbIssuer/api/json" | \
+  "${OC_URL}/crumbIssuer/api/json" 2>/dev/null | \
   python3 -c "import json,sys; d=json.load(sys.stdin); print(d['crumbRequestField']+':'+d['crumb'])")
 
-echo "  CSRF crumb acquired."
-
-# ─── Apply items via CBCI CasC items API ────────────────────────────────────
-#
-# The casc-items/apply endpoint accepts items.yaml content and provisions
-# managed masters exactly as if items.yaml were in the OC bundle — but
-# without the CasCInvalidKindException that occurs at startup.
-#
-# With removeStrategy.items: NONE, this is safe to re-run: only adds,
-# never removes existing controllers.
-
-echo ""
-echo "=== Applying controller definitions via CBCI CasC items API ==="
-HTTP_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+HTTP_STATUS=$(curl -sf -o /tmp/casc-items-response.txt -w "%{http_code}" \
   -u "${ADMIN_USER}:${API_TOKEN}" \
   -H "${CRUMB}" \
   -H "Content-Type: application/yaml" \
-  --data-binary @casc/oc-bundle/items.yaml \
+  --data-binary @"${ITEMS_FILE}" \
   "${OC_URL}/casc-items/apply" 2>/dev/null || echo "000")
 
 if [[ "${HTTP_STATUS}" == "200" || "${HTTP_STATUS}" == "204" ]]; then
-  echo "  casc-items/apply succeeded (HTTP ${HTTP_STATUS})."
+  echo "  Applied successfully (HTTP ${HTTP_STATUS})."
 else
-  echo "  casc-items/apply returned HTTP ${HTTP_STATUS} — falling back to createItem API."
-  _provision_via_create_item
+  echo "  ERROR: casc-items/apply returned HTTP ${HTTP_STATUS}"
+  cat /tmp/casc-items-response.txt 2>/dev/null || true
+  echo "  Possible causes:"
+  echo "    - API token not yet injected (setup-api-token.sh must run first)"
+  echo "    - OC SAML realm blocking basic auth (token must be in admin config.xml)"
+  exit 1
 fi
 
+# ── Wait for controllers to have running deployments ─────────────────────────
 echo ""
-echo "=== Waiting for controllers to reach APPROVED state ==="
+echo "=== Waiting for controller deployments ==="
 for CTRL in devflow test1; do
-  echo "  Waiting for ${CTRL}..."
+  echo "  Waiting for ${CTRL} Deployment..."
   for i in $(seq 1 60); do
-    STATE=$(curl -sf -u "${ADMIN_USER}:${API_TOKEN}" \
-      "${OC_URL}/job/${CTRL}/api/json?tree=description" 2>/dev/null | \
-      python3 -c "import json,sys; print(json.load(sys.stdin).get('description','UNKNOWN'))" 2>/dev/null \
-      || echo "NOT_FOUND")
-    if [[ "${STATE}" == "APPROVED" ]]; then
-      echo "  ${CTRL}: APPROVED"
+    READY=$(kubectl get deployment "${CTRL}" -n "${NAMESPACE}" \
+      -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+    DESIRED=$(kubectl get deployment "${CTRL}" -n "${NAMESPACE}" \
+      -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
+    if [[ "${READY}" == "${DESIRED}" && "${DESIRED}" != "0" ]]; then
+      echo "  ${CTRL}: ${READY}/${DESIRED} replicas ready"
       break
     fi
-    echo "  ${CTRL}: ${STATE} (${i}/60)"
+    echo "  ${CTRL}: ${READY:-0}/${DESIRED:-?} ready (${i}/60)"
     sleep 10
   done
 done
 
 echo ""
 echo "=== Controller provisioning complete ==="
-echo "  devflow: ${OC_URL%/cjoc}/devflow/"
-echo "  test1:   ${OC_URL%/cjoc}/test1/"
-
-# ─── Fallback: createItem API (used if casc-items/apply is unavailable) ─────
-_provision_via_create_item() {
-  for CTRL in devflow test1; do
-    # Check if already exists
-    EXISTING=$(curl -sf -o /dev/null -w "%{http_code}" \
-      -u "${ADMIN_USER}:${API_TOKEN}" \
-      "${OC_URL}/job/${CTRL}/api/json" 2>/dev/null || echo "404")
-    if [[ "${EXISTING}" == "200" ]]; then
-      echo "  ${CTRL}: already exists — skipping."
-      continue
-    fi
-
-    echo "  Creating ${CTRL}..."
-    # Export config from items.yaml and convert to Jenkins XML format
-    # (requires the controller to be defined in items.yaml)
-    curl -sf \
-      -u "${ADMIN_USER}:${API_TOKEN}" \
-      -H "${CRUMB}" \
-      -H "Content-Type: text/xml" \
-      --data-binary "$(python3 scripts/_items_to_xml.py "${CTRL}")" \
-      "${OC_URL}/createItem?name=${CTRL}" || {
-        echo "  WARNING: could not create ${CTRL} via createItem API."
-        echo "  Provision manually via OC UI or re-run after verifying API token."
-      }
-  done
-}
+echo "  devflow: https://cjoc.myhomettbros.com/devflow/"
+echo "  test1:   https://cjoc.myhomettbros.com/test1/"

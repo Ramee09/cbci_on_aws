@@ -31,7 +31,7 @@ kubectl run "${POD_NAME}" \
         "name": "repair",
         "image": "busybox:1.36",
         "command": ["sh", "-c",
-          "mkdir -p /jh/core-casc-bundle/jcasc && cp -L /casc-src/jenkins.yaml /jh/core-casc-bundle/jcasc/jenkins.yaml && echo Repaired && head -3 /jh/core-casc-bundle/jcasc/jenkins.yaml"],
+          "mkdir -p /jh/core-casc-bundle/jcasc && cp -L /casc-src/jenkins.yaml /jh/core-casc-bundle/jcasc/jenkins.yaml && cp -L /casc-src/items.yaml /jh/core-casc-bundle/items/items.yaml 2>/dev/null || true && echo Repaired && head -3 /jh/core-casc-bundle/jcasc/jenkins.yaml"],
         "volumeMounts": [
           {"name": "jenkins-home", "mountPath": "/jh"},
           {"name": "casc-src",    "mountPath": "/casc-src"}

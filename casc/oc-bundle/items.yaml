@@ -1,66 +1,87 @@
-# NOTE: This file is NOT referenced in bundle.yaml.
-#
-# Known issue: including items.yaml in the OC CasC bundle causes
-# CasCInvalidKindException on OC pod restart (CBCI 2.555.x — managedMaster
-# kind not registered at CasC load time). Controllers persist on EFS and
-# reconnect to OC on startup without items.yaml being applied.
-#
-# This file serves two purposes:
-#   1. Source of truth for how controllers should be configured on a fresh build.
-#   2. Applied ONCE via scripts/bootstrap.sh (after OC is fully up) to provision
-#      controllers when building from scratch.
-#
-# Networking notes:
-#   The OC injects MASTER_ENDPOINT and com.cloudbees.networking.* JVM flags into
-#   each controller Deployment at provisioning time, derived from the OC's own
-#   networking config (values-oc.yaml: protocol=https, hostname=cjoc.myhomettbros.com,
-#   useSubdomain=false). Do NOT put networking flags in javaOptions here — the OC
-#   sets them automatically. Only put CBCI-specific flags that the OC does not inject.
-#
-#   If controllers were provisioned with wrong networking settings (e.g., pre-HTTPS
-#   or after a DR restore from a pre-HTTPS backup), run:
-#     bash scripts/fix-controller-networking.sh
-#   This patches existing Deployments and is idempotent.
 removeStrategy:
   rbac: SYNC
   items: NONE
+
 items:
+  # ── DevFlow controller ────────────────────────────────────────────────────
   - kind: managedMaster
     name: "devflow"
     displayName: "DevFlow"
     properties:
-      - class: com.cloudbees.opscenter.server.properties.SlaveAgentPortProperty
       - class: com.cloudbees.opscenter.server.properties.ConnectedMasterLicenseServerProperty
       - class: com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
         disk: 20
-        memory: 2048
+        memory: 3072
         cpus: 1.0
-        fsGroup: "1000"
+        numExecutors: 0
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
-        javaOptions: >-
-          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
+        javaOptions: "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
         replication:
           replicas: 2
           maxReplicas: 4
           targetCPUUtilizationPercentage: 70
+        # Mount the devflow-casc-bundle ConfigMap via an initContainer (same pattern
+        # as the OC bundle). The initContainer copies ConfigMap files to an emptyDir
+        # at /var/jenkins_home/casc-bundle, shadowing any stale EFS content.
+        # This means git push → GitHub Actions → ConfigMap update → controller reads
+        # new bundle on next pod restart. No kubectl exec, no manual file placement.
+        yaml: |
+          spec:
+            initContainers:
+              - name: casc-bundle-copy
+                image: busybox:1.36
+                command:
+                  - sh
+                  - -c
+                  - "cp -L /casc-src/* /var/jenkins_home/casc-bundle/ && echo 'CasC bundle ready'"
+                volumeMounts:
+                  - name: casc-bundle-src
+                    mountPath: /casc-src
+                  - name: casc-bundle
+                    mountPath: /var/jenkins_home/casc-bundle
+            volumes:
+              - name: casc-bundle-src
+                configMap:
+                  name: devflow-casc-bundle
+              - name: casc-bundle
+                emptyDir: {}
 
+  # ── Test1 controller ──────────────────────────────────────────────────────
   - kind: managedMaster
     name: "test1"
     displayName: "Test1"
     properties:
-      - class: com.cloudbees.opscenter.server.properties.SlaveAgentPortProperty
       - class: com.cloudbees.opscenter.server.properties.ConnectedMasterLicenseServerProperty
       - class: com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
         disk: 20
-        memory: 2048
+        memory: 3072
         cpus: 1.0
-        fsGroup: "1000"
+        numExecutors: 0
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
-        javaOptions: >-
-          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
+        javaOptions: "-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle"
         replication:
           replicas: 2
           maxReplicas: 4
           targetCPUUtilizationPercentage: 70
+        yaml: |
+          spec:
+            initContainers:
+              - name: casc-bundle-copy
+                image: busybox:1.36
+                command:
+                  - sh
+                  - -c
+                  - "cp -L /casc-src/* /var/jenkins_home/casc-bundle/ && echo 'CasC bundle ready'"
+                volumeMounts:
+                  - name: casc-bundle-src
+                    mountPath: /casc-src
+                  - name: casc-bundle
+                    mountPath: /var/jenkins_home/casc-bundle
+            volumes:
+              - name: casc-bundle-src
+                configMap:
+                  name: test1-casc-bundle
+              - name: casc-bundle
+                emptyDir: {}
