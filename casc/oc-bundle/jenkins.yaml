@@ -91,6 +91,13 @@ unclassified:
     skipNewVersions: false
     rejectWarnings: false
   bundleStorageService:
+    # activated: true enables the casc-server plugin to manage controller bundles.
+    # Storage path is $JENKINS_HOME/jcasc-bundles-store/ (casc-server default).
+    # The SCM config tells casc-server to poll casc/controller-bundles/ from GitHub
+    # and write each subdirectory (base-bundle, devflow, test1) as a named bundle
+    # into jcasc-bundles-store/. casc-client on each controller then pulls from OC.
+    # Reload trigger: git commit hash change detected by SCM Retriever → casc-server
+    # auto-increments internal version → controllers poll and hot-reload.
     activated: true
     pollingPeriod: 120
     scm:

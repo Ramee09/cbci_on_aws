@@ -1,4 +1,4 @@
-name: Deploy CasC Bundle
+name: Validate CasC Bundle
 
 on:
   push:
@@ -6,25 +6,22 @@ on:
     paths:
       - "casc/**"
 
-# Skip runs triggered by this workflow's own auto-version commit.
-# GitHub Actions does not have a native [skip ci] mechanism for push triggers,
-# so we check the commit message at the job level.
+# Version bumping is NOT done here. The SCM Retriever sidecar detects the git
+# commit hash change and writes updated bundles to $JENKINS_HOME/jcasc-bundles-store/.
+# cloudbees-casc-server then auto-increments its own internal version counter,
+# which controllers poll against. The bundle.yaml version field is a human-readable
+# label only — bump it manually when you want to mark a significant change.
 jobs:
-  deploy:
-    name: Stamp OC bundle version
+  validate:
+    name: Validate YAML syntax
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[auto-version]')"
 
     permissions:
-      id-token: write   # required for AWS OIDC
-      contents: write   # required to commit the auto-stamped bundle.yaml back
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
       - name: Validate YAML syntax
         run: |
@@ -41,25 +38,3 @@ jobs:
               sys.exit(1)
           print('All YAML files parse cleanly.')
           "
-
-      # OC's SCM Retriever detects new git commits and downloads the bundle.
-      # OC then compares the bundle.yaml version to what it has loaded — it only
-      # applies the new bundle if the version is higher. Stamping the version here
-      # guarantees every push produces a detectable version change.
-      #
-      # Controller bundles (casc/controller-bundles/) are seeded into OC's
-      # casc-server-bundles/ on every OC pod startup via the seed-controller-bundles
-      # initContainer. No kubectl/AWS steps needed here.
-      - name: Stamp bundle version and commit
-        run: |
-          VERSION=$(git rev-list --count HEAD)
-          sed -i "s/^version: .*/version: \"${VERSION}\"/" casc/oc-bundle/bundle.yaml
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add casc/oc-bundle/bundle.yaml
-          git diff --staged --quiet && echo "No version change needed." || (
-            git commit -m "chore: [auto-version] stamp bundle version ${VERSION}"
-            git push
-            echo "Bundle version ${VERSION} committed. OC SCM Retriever will apply within 3 minutes."
-            echo "For immediate apply: POST to https://cjoc.myhomettbros.com/cjoc/casc-retriever/retriever-github-webhook/"
-          )
