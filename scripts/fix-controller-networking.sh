@@ -91,6 +91,47 @@ echo "Waiting for rollouts to complete..."
 kubectl rollout status deployment/devflow -n "${NAMESPACE}" --timeout=5m || true
 kubectl rollout status deployment/test1  -n "${NAMESPACE}" --timeout=5m || true
 
+# --- OC EFS state files ---
+# The OC stores each controller's endpoint in two XML files on its own EFS volume
+# (jenkins home of the OC pod, not the controller pod):
+#   /var/jenkins_home/jobs/{name}/config.xml  →  <localEndpoint>
+#   /var/jenkins_home/jobs/{name}/state.xml   →  <endpointURL>   ← authoritative
+#
+# On OC startup, state.xml is read and its value is written back into config.xml.
+# Patching only config.xml is not sufficient — state.xml will overwrite it on restart.
+# Both files must be patched, then the OC pod restarted once so it loads the new values.
+#
+# This step is only needed when controllers were provisioned with an old URL
+# (e.g., after a DR restore from a pre-HTTPS backup or after ALB replacement).
+# It is safe to run on a fresh install — sed will make no changes if the URLs are already correct.
+
+echo ""
+echo "=== Patching OC EFS controller state files ==="
+OC_POD=$(kubectl get pod -n "${NAMESPACE}" -l app=cjoc -o jsonpath='{.items[0].metadata.name}')
+echo "OC pod: ${OC_POD}"
+
+for CTRL in devflow test1; do
+  CORRECT_URL="https://${CORRECT_HOSTNAME}/${CTRL}/"
+  echo "  Patching ${CTRL} (target: ${CORRECT_URL})..."
+  kubectl exec -n "${NAMESPACE}" "${OC_POD}" -- sh -c "
+    for FILE in /var/jenkins_home/jobs/${CTRL}/config.xml /var/jenkins_home/jobs/${CTRL}/state.xml; do
+      if [ -f \"\$FILE\" ]; then
+        sed -i 's|http://[^/]*/'"${CTRL}"'/|${CORRECT_URL}|g' \"\$FILE\"
+        sed -i 's|https://[^/]*/'"${CTRL}"'/|${CORRECT_URL}|g' \"\$FILE\"
+        echo \"    patched: \$FILE\"
+      else
+        echo \"    not found (controller not yet provisioned): \$FILE\"
+      fi
+    done
+  "
+done
+
+echo ""
+echo "=== Restarting OC pod so it reads corrected state.xml ==="
+kubectl delete pod "${OC_POD}" -n "${NAMESPACE}"
+kubectl wait --for=condition=Ready pod -l app=cjoc -n "${NAMESPACE}" --timeout=5m
+echo "OC pod restarted and ready."
+
 echo ""
 echo "Done. Controller URLs:"
 echo "  devflow: https://cjoc.myhomettbros.com/devflow/"
