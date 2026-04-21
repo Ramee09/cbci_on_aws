@@ -461,6 +461,21 @@ resource "aws_iam_role_policy" "external_dns_route53" {
 # After install, manually delete any existing Route 53 A records for
 # cjoc/devflow/test1 — ExternalDNS will recreate them from Ingress annotations.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# EKS Access Entry — maps cbci-lab-github-actions IAM role to k8s username
+# "github-actions", which the Role in k8s/rbac-github-actions.yaml grants
+# permission to update the oc-casc-bundle ConfigMap.
+#
+# This replaces the older aws-auth ConfigMap approach (eksctl iamidentitymapping).
+# ---------------------------------------------------------------------------
+resource "aws_eks_access_entry" "github_actions" {
+  cluster_name  = local.cluster_name
+  principal_arn = aws_iam_role.github_actions.arn
+  type          = "STANDARD"
+  user_name     = "github-actions"
+  tags          = local.common_tags
+}
+
 resource "helm_release" "external_dns" {
   namespace  = "kube-system"
   name       = "external-dns"
