@@ -20,6 +20,7 @@ plugins:
   - id: "infradna-backup"
   - id: "cloudbees-blueocean-default-theme"
   - id: "cloudbees-casc-client"
+  - id: "cloudbees-casc-scm-retriever"
   - id: "cloudbees-casc-items-api"
   - id: "cloudbees-casc-items-commons"
   - id: "cloudbees-casc-items-server"

@@ -1,0 +1,8 @@
+id: "base-bundle"
+version: "1"
+apiVersion: "1"
+description: "Base bundle — inherited by all managed controllers"
+jcasc:
+  - "jenkins.yaml"
+plugins:
+  - "plugins.yaml"

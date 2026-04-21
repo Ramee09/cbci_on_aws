@@ -1,7 +1,8 @@
 id: "devflow"
-version: "6"
+version: "7"
 apiVersion: "1"
-description: "DevFlow managed controller CasC bundle"
+parent: "base-bundle"
+description: "DevFlow managed controller — inherits from base-bundle"
 jcasc:
   - "jenkins.yaml"
 items:

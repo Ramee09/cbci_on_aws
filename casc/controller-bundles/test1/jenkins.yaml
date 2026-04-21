@@ -1,27 +1,6 @@
 jenkins:
   systemMessage: "Test1 Controller — managed by CloudBees CI CasC"
 
-  authorizationStrategy:
-    loggedInUsersCanDoAnything:
-      allowAnonymousRead: false
-
-  clouds:
-    - kubernetes:
-        name: "kubernetes"
-        podRetention: "never"
-        templates:
-          - name: "default"
-            label: "default-agent"
-            nodeSelector: "role=agent"
-            containers:
-              - name: "jnlp"
-                image: "cloudbees/cloudbees-agent:latest"
-                alwaysPullImage: false
-                resourceRequestCpu: "500m"
-                resourceLimitCpu: "1"
-                resourceRequestMemory: "512Mi"
-                resourceLimitMemory: "1Gi"
-
 unclassified:
   location:
     url: "https://cjoc.myhomettbros.com/test1/"

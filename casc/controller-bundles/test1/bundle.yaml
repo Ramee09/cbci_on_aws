@@ -1,7 +1,8 @@
 id: "test1"
-version: "5"
+version: "6"
 apiVersion: "1"
-description: "Test1 managed controller CasC bundle"
+parent: "base-bundle"
+description: "Test1 managed controller — inherits from base-bundle"
 jcasc:
   - "jenkins.yaml"
 items:
