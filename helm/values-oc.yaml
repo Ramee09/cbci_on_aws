@@ -7,7 +7,8 @@ OperationsCenter:
     Enabled: false
 
   # Point CBCI at the emptyDir where initContainer copied the real files
-  JavaOpts: "-Dcore.casc.config.bundle=/var/jenkins_casc-real"
+  # Set networking to HTTPS so CBCI constructs correct ACS/root URLs for SAML
+  JavaOpts: "-Dcore.casc.config.bundle=/var/jenkins_casc-real -Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.useSubdomain=false"
 
   # Phase 12b: replace with ESO-sourced Kubernetes secret
   ContainerEnv:

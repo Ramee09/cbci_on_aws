@@ -133,30 +133,28 @@ Gate met: 46 Prometheus targets healthy, CloudWatch log streams verified, Grafan
 
 ---
 
-## Phase 12a — Entra ID SAML SSO [NEXT]
-Identity provider: owner's personal Microsoft Entra tenant (free tier — no license purchase).
-Plugin: Jenkins SAML Plugin, pinned in `plugins.yaml`.
+## Phase 12a — Entra ID SAML SSO [DONE]
+Identity provider: owner's personal Microsoft Entra tenant (free tier + Entra ID P1 trial).
+Plugin: Jenkins SAML Plugin v4.595.vec7523b_5d543 installed on OC.
 
-Entra-side setup (owner clicks through the Entra admin UI with Claude Code's exact click-path and values):
-- Create a SAML Enterprise Application for CBCI
-- Create AD groups: `cbci-admins`, `cbci-devflow-admins`, `cbci-devflow-developers`, `cbci-readonly`
-- Assign self + one test user to groups
-- Provide Claude Code with the federation metadata URL, entity ID, and SAML signing certificate
+What was done:
+- ACM wildcard cert `*.myhomettbros.com` issued and validated via Route 53 DNS
+- ALB updated to HTTPS (listen-ports 80+443, ssl-redirect to 443)
+- Entra Enterprise Application created for CBCI (App ID: 6b101f71-9355-43da-9f30-ded8fb8ef07a)
+  - Identifier (Entity ID): `https://cjoc.myhomettbros.com/cjoc/`
+  - Reply URL (ACS): `https://cjoc.myhomettbros.com/cjoc/securityRealm/finishLogin`
+  - groupMembershipClaims set to SecurityGroup in app manifest (free tier workaround)
+- OC CasC bundle: saml plugin added, SAML security realm configured
+  - App-specific metadata embedded inline (BOM stripped) to fix signature validation
+  - spEntityId set via advancedConfiguration
+  - binding: HTTP-POST
+- Owner successfully logs in via Entra SAML SSO
 
-CBCI-side setup (Claude Code does):
-- Add `saml` plugin to `plugins.yaml` at pinned version
-- Configure SAML security realm in OC `jenkins.yaml` — entity ID, reply URL, metadata URL, attribute mappings for groups, NameID format
-- Configure group-based RBAC in `rbac.yaml` — map Entra group names to Jenkins global + per-controller roles
-- Reload bundle
-- Test: log in as admin test user (observes admin permissions), log in as developer test user (observes restricted permissions)
-- Troubleshoot any entity ID / reply URL / certificate / NameID format mismatches
-- Commit: `phase 12a: Entra SAML SSO with group-based RBAC`
-
-Gate: owner logs in via Entra as both admin and developer, confirms correct permissions in each case, approves "proceed."
+Pending (Phase 12c): group-based RBAC mapping (cbci-admins OID: a928ae2a-b389-455e-8701-cd69d51d0553)
 
 ---
 
-## Phase 12b — Secrets management
+## Phase 12b — Secrets management [NEXT]
 Claude Code does:
 - Install External Secrets Operator via Helm (pinned) with IRSA
 - Create ClusterSecretStore pointing at AWS Secrets Manager
