@@ -81,8 +81,27 @@ curl -s -o /dev/null -w "%{http_code}" https://cjoc.myhomettbros.com/cjoc/login
 # Expected: 200 or 302
 ```
 
+### 7. Update Route 53 if the ALB address changed
+After restore the AWS LBC creates new ALBs with new addresses. Check and update Route 53:
+```bash
+# Get new ALB address
+NEW_ALB=$(kubectl get ingress cjoc -n cloudbees -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+echo $NEW_ALB
+
+# Update Route 53 Alias records (ALB zone ID for us-east-1: Z35SXDOTRQ7X7K)
+ZONE_ID="Z0799612KTOUP3I7DFHC"
+for NAME in cjoc devflow test1; do
+  aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --profile cbci-lab \
+    --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{
+      \"Name\":\"${NAME}.myhomettbros.com.\",\"Type\":\"A\",
+      \"AliasTarget\":{\"HostedZoneId\":\"Z35SXDOTRQ7X7K\",
+      \"DNSName\":\"$NEW_ALB\",\"EvaluateTargetHealth\":true}}}]}"
+done
+```
+
 ## Known restore caveats
 
 - **TargetGroupBinding errors**: Always occur on restore because old ALB target groups are gone. Self-healing — AWS LBC recreates them within 2-3 minutes.
 - **PV claimRef must be cleared**: Velero restores PVCs with new UIDs but the static EFS PVs still have the old UID in their claimRef. Manual patch required.
+- **ALB address changes on every restore**: AWS LBC creates a new ALB with a new hostname. Route 53 Alias records must be updated manually (see Step 7). Installing ExternalDNS would automate this.
 - **EFS data is NOT restored by Velero**: Only Kubernetes resources are restored. EFS data persists because `reclaimPolicy: Retain`. In a true data-loss scenario, use AWS Backup to restore the EFS filesystem.
