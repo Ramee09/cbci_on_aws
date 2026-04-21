@@ -1,0 +1,98 @@
+## kube-prometheus-stack values — Phase 11 Observability
+## Chart: prometheus-community/kube-prometheus-stack v83.6.0
+
+nameOverride: ""
+fullnameOverride: ""
+
+## Prometheus
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    retentionSize: "9GB"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp2
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    # Discover ServiceMonitors / PodMonitors across all namespaces
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorNamespaceSelector: {}
+    podMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+    # Note: CBCI controller Prometheus plugin is not in CloudBees CAP; skipping controller-level scrape.
+    # k8s-level metrics (CPU/memory/restarts) are covered by kube-state-metrics and node-exporter.
+
+## Grafana
+grafana:
+  enabled: true
+  adminPassword: "cbci-grafana-admin"
+  persistence:
+    enabled: false  # lab — Grafana state not critical
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  # Import CloudBees CI dashboard from grafana.com
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+      jenkins-performance:
+        gnetId: 9524
+        revision: 1
+        datasource: Prometheus
+
+## Alertmanager — enabled but no routes (lab)
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+## kube-state-metrics
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+## node-exporter
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

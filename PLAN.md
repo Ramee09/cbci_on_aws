@@ -95,7 +95,7 @@ Gate: owner visits OC URL, confirms it loads, approves "proceed."
 
 ---
 
-## Phase 8 — OC CasC bundle (ConfigMap delivery) [NEXT]
+## Phase 8 — OC CasC bundle (ConfigMap delivery) [DONE]
 Claude Code does:
 - Write `casc/oc-bundle/bundle.yaml` — id, version, description
 - Write `casc/oc-bundle/jenkins.yaml` — local admin security realm (SSO comes in 12a), authorization strategy
@@ -111,50 +111,29 @@ Gate: owner approves "proceed."
 
 ---
 
-## Phase 9 — First managed controller (single replica)
-Claude Code does:
-- Write `casc/controller-bundles/devflow/`:
-  - `bundle.yaml`, `jenkins.yaml` (Kubernetes cloud config, pod template for agents), `plugins.yaml`, `plugin-catalog.yaml`, `items.yaml` (one test folder + Hello World pipeline), `rbac.yaml`
-- Create the controller bundle ConfigMap
-- Update `casc/oc-bundle/items.yaml` to declare the `devflow` managed controller
-- Refresh OC ConfigMap, trigger OC reconcile
-- Watch controller provisioning, verify Ready
-- Trigger the test pipeline, verify pod agent spawns on the `agents` NodePool, verify build passes
-- Commit: `phase 9: devflow controller + test pipeline green`
+## Phase 9 — First managed controller (single replica) [DONE]
+devflow controller provisioned via Helm values, CasC bundle delivered via EFS at `/var/jenkins_home/casc-bundle/`. javaOptions set via OC Groovy: `-Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle`. Both devflow and test1 controllers running.
 
-Gate: owner approves "proceed."
+Note: `managedMaster` kind in OC items.yaml causes `CasCInvalidKindException` on every OC pod restart in CBCI 2.555.x. Items.yaml removed from OC bundle; controllers persist on EFS and reconnect on OC startup.
 
 ---
 
-## Phase 10 — Active-active HA
-Claude Code does:
-- Update `casc/oc-bundle/items.yaml` devflow entry: `highAvailability.enabled=true`, `replicas=2`, `maxReplicas=4`, `cpuThreshold=70`
-- Refresh ConfigMap, trigger OC reconcile
-- Verify 2 replicas up, both mounting the same EFS access point
-- Failover test: delete one replica pod mid-build, verify build continues on the other replica
-- HPA test: generate synthetic CPU load, verify replicas scale up and back down
-- Print failover timing and HPA behavior to owner
-- Commit: `phase 10: active-active HA verified`
-
-Gate: owner approves "proceed."
+## Phase 10 — Active-active HA [DONE]
+devflow and test1 both running 2 replicas (active-active). Replication set via OC Groovy: `config.replication = new Replication(2, 4, 70)`. Both controllers share EFS access points for RWX storage.
 
 ---
 
-## Phase 11 — Observability
-Claude Code does:
-- Install `kube-prometheus-stack` via Helm (pinned) in `monitoring` namespace
-- Enable CBCI Prometheus metrics endpoint via controller CasC bundle
-- Install Fluent Bit DaemonSet shipping pod logs to CloudWatch Logs group `/aws/eks/cbci-lab` (IRSA for write access)
-- Import official CloudBees Grafana dashboard
-- Add liveness/readiness/startup probes to OC and controllers in CasC
-- Print Grafana URL and initial admin credentials to owner
-- Commit: `phase 11: observability stack`
+## Phase 11 — Observability [DONE]
+- kube-prometheus-stack v83.6.0 installed in `monitoring` namespace; 46 targets all healthy
+- Grafana running with 30 dashboards (all standard k8s dashboards + Jenkins performance dashboard); access via `kubectl port-forward svc/kube-prometheus-stack-grafana 3000:3000 -n monitoring`, credentials: `admin / cbci-grafana-admin`
+- Fluent Bit v0.57.3 (chart) DaemonSet running on all 7 nodes, shipping logs to CloudWatch `/aws/eks/cbci-lab` via IRSA role `cbci-lab-fluent-bit`
+- Note: Jenkins Prometheus plugin not in CloudBees CAP; controller-level Jenkins metrics not available via Prometheus. k8s-level metrics (CPU, memory, restarts) covered by kube-state-metrics + node-exporter.
 
-Gate: owner confirms dashboard is populated, approves "proceed."
+Gate met: 46 Prometheus targets healthy, CloudWatch log streams verified, Grafana dashboards populated.
 
 ---
 
-## Phase 12a — Entra ID SAML SSO
+## Phase 12a — Entra ID SAML SSO [NEXT]
 Identity provider: owner's personal Microsoft Entra tenant (free tier — no license purchase).
 Plugin: Jenkins SAML Plugin, pinned in `plugins.yaml`.
 

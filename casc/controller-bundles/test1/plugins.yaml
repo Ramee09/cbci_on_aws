@@ -1,3 +1,4 @@
 plugins: []
-# CloudBees CI managed controller image ships 135 plugins via the envelope.
-# List additional plugins here as phases require them.
+# Non-CAP plugins are silently ignored by CBCI managed controllers.
+# Phase 12a: add saml (in CAP)
+# Phase 12b: add aws-secrets-manager-credentials-provider (in CAP)
