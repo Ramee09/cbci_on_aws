@@ -10,10 +10,12 @@ OperationsCenter:
   # Set networking to HTTPS so CBCI constructs correct ACS/root URLs for SAML
   JavaOpts: "-Dcore.casc.config.bundle=/var/jenkins_casc-real -Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.useSubdomain=false"
 
-  # Phase 12b: replace with ESO-sourced Kubernetes secret
   ContainerEnv:
     - name: JENKINS_ADMIN_PASSWORD
-      value: "bf386caf76c04f4681dea2c741471499"
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-admin-secret
+          key: password
 
   # Copy bundle files from ConfigMap (symlink structure) to emptyDir (real files)
   # cp -L resolves symlinks so CBCI sees only plain YAML — no ..data/ or timestamp dirs

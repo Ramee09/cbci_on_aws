@@ -154,20 +154,18 @@ Pending (Phase 12c): group-based RBAC mapping (cbci-admins OID: a928ae2a-b389-45
 
 ---
 
-## Phase 12b — Secrets management [NEXT]
-Claude Code does:
-- Install External Secrets Operator via Helm (pinned) with IRSA
-- Create ClusterSecretStore pointing at AWS Secrets Manager
-- For each credential CBCI needs: create Secrets Manager entry + corresponding `ExternalSecret` resource
-- Update CBCI CasC to reference synced secrets via Jenkins credential providers
-- Audit all Git-tracked files for hardcoded credentials (grep for common patterns)
-- Commit: `phase 12b: secrets via ESO + Secrets Manager`
-
-Gate: owner approves "proceed."
+## Phase 12b — Secrets management [DONE]
+- ESO v2.3.0 installed in `external-secrets` namespace via Helm; IRSA role `cbci-lab-eso` with Secrets Manager read on `cbci-lab/*`
+- ClusterSecretStore `aws-secrets-manager` validated (us-east-1)
+- Secrets in AWS Secrets Manager: `cbci-lab/jenkins-admin-password`, `cbci-lab/grafana-admin-password`
+- ExternalSecrets sync to: `jenkins-admin-secret` (cloudbees ns), `grafana-admin-secret` (monitoring ns)
+- `values-oc.yaml`: JENKINS_ADMIN_PASSWORD now uses `secretKeyRef` (no plaintext)
+- `values-monitoring.yaml`: Grafana uses `admin.existingSecret` (no plaintext)
+- Repo audit: no remaining hardcoded credentials in tracked files
 
 ---
 
-## Phase 13 — Backup + DR drill
+## Phase 13 — Backup + DR drill [NEXT]
 Claude Code does:
 - Enable AWS Backup plan for EFS filesystem — daily snapshot, 7-day retention
 - Install Velero via Helm with AWS plugin + IRSA, S3 bucket for backups
