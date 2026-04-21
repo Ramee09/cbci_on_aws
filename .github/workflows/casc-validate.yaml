@@ -1,0 +1,21 @@
+name: Validate CasC Bundles
+
+on:
+  pull_request:
+    paths:
+      - "casc/**"
+      - "helm/values-oc.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: CasC pre-flight check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run validate-casc.sh
+        run: bash scripts/validate-casc.sh casc

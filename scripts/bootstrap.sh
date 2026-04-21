@@ -33,10 +33,6 @@ echo " CBCI on AWS — Bootstrap (ENV=${ENV})"
 echo "=========================================="
 echo ""
 
-echo "=== 0. Pre-flight: CasC bundle validation ==="
-bash scripts/validate-casc.sh casc
-
-echo ""
 echo "=== 1. Kubeconfig ==="
 aws eks update-kubeconfig --name "${CLUSTER}" --region "${REGION}"
 

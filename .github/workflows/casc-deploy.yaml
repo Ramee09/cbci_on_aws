@@ -32,6 +32,9 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name cbci-lab --region us-east-1
 
+      - name: Validate CasC bundles
+        run: bash scripts/validate-casc.sh casc
+
       - name: Compute bundle version from git commit count
         id: version
         run: |
