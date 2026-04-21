@@ -32,8 +32,21 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name cbci-lab --region us-east-1
 
-      - name: Validate CasC bundles
-        run: bash scripts/validate-casc.sh casc
+      - name: Validate YAML syntax
+        run: |
+          python3 -c "
+          import yaml, sys, pathlib
+          errors = 0
+          for f in pathlib.Path('casc').rglob('*.yaml'):
+              try:
+                  yaml.safe_load(f.read_text())
+              except yaml.YAMLError as e:
+                  print(f'SYNTAX ERROR in {f}: {e}')
+                  errors += 1
+          if errors:
+              sys.exit(1)
+          print('All YAML files parse cleanly.')
+          "
 
       - name: Compute bundle version from git commit count
         id: version

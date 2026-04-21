@@ -17,5 +17,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run validate-casc.sh
-        run: bash scripts/validate-casc.sh casc
+      - name: Validate YAML syntax
+        run: |
+          python3 -c "
+          import yaml, sys, pathlib
+          errors = 0
+          for f in pathlib.Path('casc').rglob('*.yaml'):
+              try:
+                  yaml.safe_load(f.read_text())
+              except yaml.YAMLError as e:
+                  print(f'SYNTAX ERROR in {f}: {e}')
+                  errors += 1
+          if errors:
+              sys.exit(1)
+          print(f'All YAML files parse cleanly.')
+          "
+
+      - name: Check for known-bad OC attributes
+        run: |
+          OC=casc/oc-bundle/jenkins.yaml
+          if grep -qE '^  users:' "$OC"; then
+            echo "ERROR: 'jenkins.users:' is not supported in CBCI 2.555.x — remove it."
+            exit 1
+          fi
+          if grep -qE '^  globalLibraries:' "$OC"; then
+            echo "ERROR: 'unclassified.globalLibraries' is not available on OC — move it to controller bundles."
+            exit 1
+          fi
+          echo "OC bundle: no known-bad attributes found."

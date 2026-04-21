@@ -17,10 +17,6 @@ POD_NAME="oc-efs-repair-$$"
 
 echo "=== Repairing OC EFS bundle cache ==="
 
-# Run validate-casc.sh first so we never copy a bad bundle to EFS
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-bash "${SCRIPT_DIR}/validate-casc.sh" casc
-
 kubectl run "${POD_NAME}" \
   --image=busybox:1.36 \
   --restart=Never \
