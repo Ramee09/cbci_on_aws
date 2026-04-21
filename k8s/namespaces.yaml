@@ -15,13 +15,6 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: external-secrets
-  labels:
-    name: external-secrets
----
-apiVersion: v1
-kind: Namespace
-metadata:
   name: velero
   labels:
     name: velero

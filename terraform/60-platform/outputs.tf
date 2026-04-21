@@ -3,11 +3,6 @@ output "fluent_bit_role_arn" {
   value       = aws_iam_role.fluent_bit.arn
 }
 
-output "eso_role_arn" {
-  description = "IRSA role ARN for External Secrets Operator"
-  value       = aws_iam_role.eso.arn
-}
-
 output "velero_role_arn" {
   description = "IRSA role ARN for Velero"
   value       = aws_iam_role.velero.arn
@@ -36,14 +31,4 @@ output "external_dns_role_arn" {
 output "jenkins_admin_secret_arn" {
   description = "Secrets Manager ARN for CBCI admin password"
   value       = aws_secretsmanager_secret.jenkins_admin.arn
-}
-
-output "grafana_admin_secret_arn" {
-  description = "Secrets Manager ARN for Grafana admin credentials"
-  value       = aws_secretsmanager_secret.grafana_admin.arn
-}
-
-output "jenkins_api_token_secret_arn" {
-  description = "Secrets Manager ARN for CBCI automation API token"
-  value       = aws_secretsmanager_secret.jenkins_api_token.arn
 }

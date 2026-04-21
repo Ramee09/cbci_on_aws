@@ -48,22 +48,20 @@ echo "=== 3. StorageClass (EFS) ==="
 kubectl apply -f k8s/storageclass-efs.yaml
 
 echo ""
-echo "=== 4. External Secrets Operator ==="
-helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
-helm upgrade --install external-secrets external-secrets/external-secrets \
-  --namespace external-secrets \
-  --version 0.13.0 \
-  --values helm/values-eso.yaml \
-  --wait --timeout 5m
+echo "=== 4. Jenkins admin secret ==="
+# Pull the admin password directly from Secrets Manager and create the K8s secret.
+# No ESO controller needed — AWS CLI has access via AWS_PROFILE=cbci-lab.
+JENKINS_PASSWORD=$(aws secretsmanager get-secret-value \
+  --secret-id cbci-lab/jenkins-admin-password \
+  --query SecretString --output text \
+  --region "${REGION}" | jq -r .password)
 
-kubectl apply -f k8s/eso-cluster-secret-store.yaml
+kubectl create secret generic jenkins-admin-secret \
+  --from-literal=password="${JENKINS_PASSWORD}" \
+  --namespace cloudbees \
+  --dry-run=client -o yaml | kubectl apply -f -
 
-# ESO syncs jenkins-admin-password from Secrets Manager → jenkins-admin-secret in K8s.
-kubectl apply -f k8s/eso-external-secrets.yaml
-
-echo "  Waiting for jenkins-admin-secret to sync..."
-kubectl wait --for=condition=Ready externalsecret/jenkins-admin-password \
-  -n cloudbees --timeout=120s
+echo "  jenkins-admin-secret created."
 
 echo ""
 echo "=== 5. kube-prometheus-stack (monitoring) ==="

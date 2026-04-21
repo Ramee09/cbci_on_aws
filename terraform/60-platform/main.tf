@@ -143,49 +143,6 @@ resource "aws_iam_role_policy" "fluent_bit_cloudwatch" {
   })
 }
 
-# ---------------------------------------------------------------------------
-# IAM role: External Secrets Operator → Secrets Manager   (Phase 12b)
-#
-# Import: terraform import aws_iam_role.eso cbci-lab-eso
-# ---------------------------------------------------------------------------
-resource "aws_iam_role" "eso" {
-  name = "cbci-lab-eso"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Federated = local.oidc_provider_arn }
-      Action    = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "${local.oidc_provider_url}:sub" = "system:serviceaccount:external-secrets:external-secrets"
-          "${local.oidc_provider_url}:aud" = "sts.amazonaws.com"
-        }
-      }
-    }]
-  })
-
-  tags = local.common_tags
-}
-
-resource "aws_iam_role_policy" "eso_secrets_manager" {
-  name = "eso-secrets-manager"
-  role = aws_iam_role.eso.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "secretsmanager:GetSecretValue",
-        "secretsmanager:DescribeSecret",
-        "secretsmanager:ListSecretVersionIds",
-      ]
-      Resource = "arn:aws:secretsmanager:${local.region}:${local.account_id}:secret:cbci-lab/*"
-    }]
-  })
-}
 
 # ---------------------------------------------------------------------------
 # S3 bucket: Velero backup storage   (Phase 13)
