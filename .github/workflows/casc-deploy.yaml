@@ -1,0 +1,54 @@
+name: Deploy CasC Bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "casc/oc-bundle/**"
+
+permissions:
+  id-token: write   # required for AWS OIDC
+  contents: read
+
+jobs:
+  deploy-oc-bundle:
+    name: Update OC CasC ConfigMap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::835090871306:role/cbci-lab-github-actions
+          aws-region: us-east-1
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.31.0"
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name cbci-lab --region us-east-1
+
+      - name: Compute bundle version from git commit count
+        id: version
+        run: |
+          VERSION=$(git rev-list --count HEAD)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Bundle version: ${VERSION}"
+
+      - name: Stamp version into bundle.yaml
+        run: |
+          sed -i "s/^version: .*/version: \"${{ steps.version.outputs.version }}\"/" casc/oc-bundle/bundle.yaml
+          grep "^version:" casc/oc-bundle/bundle.yaml
+
+      - name: Apply ConfigMap to cluster
+        run: |
+          kubectl create configmap oc-casc-bundle \
+            --from-file=casc/oc-bundle/bundle.yaml \
+            --from-file=casc/oc-bundle/jenkins.yaml \
+            --from-file=casc/oc-bundle/plugins.yaml \
+            --dry-run=client -o yaml | kubectl apply -f - -n cloudbees
+          echo "ConfigMap applied. OC will reload bundle within 1-2 minutes."

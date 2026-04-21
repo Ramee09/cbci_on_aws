@@ -76,7 +76,7 @@ jenkins:
       logoutUrl: https://login.microsoftonline.com/504de928-8905-4671-a42f-3583b128e4ae/saml2
       maximumAuthenticationLifetime: 86400
       usernameAttributeName: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress
-  systemMessage: CloudBees CI Operations Center - managed via CasC
+  systemMessage: CloudBees CI Operations Center - managed via CasC (GitOps active)
 unclassified:
   location:
     adminAddress: ''

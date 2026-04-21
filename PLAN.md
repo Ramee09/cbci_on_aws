@@ -179,16 +179,24 @@ Gate: owner approves "proceed."
 
 ---
 
-## Phase 14 — Migrate CasC to SCM (GitOps Bundle Service) [NEXT]
-Claude Code does:
-- Create Git structure for CasC bundles (subdirectory of this repo or separate repo — owner decides)
-- Configure OC Bundle Service to poll the Git source
-- Retire ConfigMap-based delivery
-- Make a test change via PR → merge → watch OC pick it up → verify controllers reconcile
-- Document GitOps workflow in `docs/runbooks/casc-gitops.md`
-- Commit: `phase 14: CasC via SCM Bundle Service — project complete`
+## Phase 14 — CasC GitOps via GitHub Actions [DONE]
+GitHub Actions + AWS OIDC replaces manual ConfigMap delivery.
 
-Gate: owner approves "project complete."
+What was done:
+- GitHub OIDC provider registered in IAM
+- IAM role `cbci-lab-github-actions` with trust scoped to `Ramee09/cbci_on_aws` main branch
+- RBAC: Role `casc-bundle-updater` allows updating `oc-casc-bundle` ConfigMap in cloudbees namespace
+- Workflow `.github/workflows/casc-deploy.yaml`: triggers on push to `casc/oc-bundle/**` on main
+  - Authenticates via OIDC (no stored secrets)
+  - Stamps version from git commit count
+  - Applies ConfigMap to cluster
+  - OC reloads bundle automatically within 1-2 min
+- Note: `cloudbees-casc-server` plugin is installed on OC but the GitHub SCM plugin is not
+  in CloudBees CAP, so the native Bundle Service Git integration was not used.
+
+GitOps flow: edit casc/ → git push → GitHub Actions → ConfigMap updated → OC reloads
+
+--- PROJECT COMPLETE ---
 
 ---
 
