@@ -58,17 +58,11 @@ helm upgrade --install external-secrets external-secrets/external-secrets \
 
 kubectl apply -f k8s/eso-cluster-secret-store.yaml
 
-# All secrets created by Terraform (terraform/60-platform) — no manual seeding.
-# Secrets Manager: jenkins-admin-password, grafana-admin-password, jenkins-api-token
-# ESO syncs them to Kubernetes secrets automatically.
+# ESO syncs jenkins-admin-password from Secrets Manager → jenkins-admin-secret in K8s.
 kubectl apply -f k8s/eso-external-secrets.yaml
 
 echo "  Waiting for jenkins-admin-secret to sync..."
 kubectl wait --for=condition=Ready externalsecret/jenkins-admin-password \
-  -n cloudbees --timeout=120s
-
-echo "  Waiting for casc-retriever-secrets (GitHub PAT) to sync..."
-kubectl wait --for=condition=Ready externalsecret/github-casc-retriever \
   -n cloudbees --timeout=120s
 
 echo ""

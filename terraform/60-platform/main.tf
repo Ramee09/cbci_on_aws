@@ -382,13 +382,10 @@ resource "aws_iam_role_policy" "github_actions_eks" {
 }
 
 # ---------------------------------------------------------------------------
-# Secrets Manager: secret names only — values are set via CLI, never via TF
+# Secrets Manager: admin password only — value is set via CLI, never via TF
 #
-# Import jenkins: terraform import aws_secretsmanager_secret.jenkins_admin \
+# Import: terraform import aws_secretsmanager_secret.jenkins_admin \
 #   $(aws secretsmanager describe-secret --secret-id cbci-lab/jenkins-admin-password \
-#       --query ARN --output text --profile cbci-lab)
-# Import grafana:  terraform import aws_secretsmanager_secret.grafana_admin \
-#   $(aws secretsmanager describe-secret --secret-id cbci-lab/grafana-admin-password \
 #       --query ARN --output text --profile cbci-lab)
 # ---------------------------------------------------------------------------
 resource "aws_secretsmanager_secret" "jenkins_admin" {
@@ -399,41 +396,6 @@ resource "aws_secretsmanager_secret" "jenkins_admin" {
   lifecycle {
     ignore_changes = [tags_all]
   }
-}
-
-resource "aws_secretsmanager_secret" "grafana_admin" {
-  name        = "cbci-lab/grafana-admin-password"
-  description = "Grafana admin credentials (keys: username, password)"
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [tags_all]
-  }
-}
-
-# ---------------------------------------------------------------------------
-# CI automation API token for bootstrap scripts
-# The token value is auto-generated; scripts read it from Secrets Manager.
-# The SHA-256 hash is what Jenkins stores in the user's config.xml —
-# Terraform computes it so the hash and plaintext are always in sync.
-# ---------------------------------------------------------------------------
-resource "random_password" "jenkins_api_token" {
-  length  = 32
-  special = false
-}
-
-resource "aws_secretsmanager_secret" "jenkins_api_token" {
-  name        = "cbci-lab/jenkins-api-token"
-  description = "CBCI OC automation API token — used by bootstrap scripts, never by humans"
-  tags        = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_version" "jenkins_api_token" {
-  secret_id = aws_secretsmanager_secret.jenkins_api_token.id
-  secret_string = jsonencode({
-    token = random_password.jenkins_api_token.result
-    hash  = sha256(random_password.jenkins_api_token.result)
-  })
 }
 
 # ---------------------------------------------------------------------------

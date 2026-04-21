@@ -36,10 +36,7 @@ prometheus:
 ## Grafana
 grafana:
   enabled: true
-  admin:
-    existingSecret: grafana-admin-secret
-    userKey: admin-user
-    passwordKey: admin-password
+  adminPassword: "admin"
   persistence:
     enabled: false  # lab — Grafana state not critical
   resources:

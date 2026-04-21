@@ -14,10 +14,7 @@ OperationsCenter:
       scmBranch: "main"
       scmBundlePath: "casc/oc-bundle"
       scmPollingInterval: "PT3M"
-      githubWebhooksEnabled: true
-      secrets:
-        secretName: casc-retriever-secrets
-        githubWebhookSecret: gh-webhook-secret
+      githubWebhooksEnabled: false
 
   # Networking opts required for SAML SSO to construct correct ACS/root URLs.
   # core.casc.config.bundle is NOT set — the SCM Retriever manages that path.
