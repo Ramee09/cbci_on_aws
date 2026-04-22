@@ -2,7 +2,7 @@ OperationsCenter:
   Platform: standard
 
   # SCM Retriever fetches the bundle from GitHub on startup (init container) and
-  # polls every 3 minutes (sidecar). When a new bundle version is detected, OC
+  # polls every 1 minute. When a new bundle version is detected, OC
   # reloads automatically via bundleUpdateTiming in jenkins.yaml.
   # Webhook: https://cjoc.myhomettbros.com/cjoc/casc-retriever/retriever-github-webhook/
   # Configure that URL in GitHub repo Settings → Webhooks for instant apply on push.
@@ -13,8 +13,8 @@ OperationsCenter:
       scmRepo: "https://github.com/Ramee09/cbci_on_aws.git"
       scmBranch: "main"
       scmBundlePath: "casc/oc-bundle"
-      scmPollingInterval: "PT3M"
-      githubWebhooksEnabled: false
+      scmPollingInterval: "PT1M"
+      githubWebhooksEnabled: "false"
 
   # Networking opts required for SAML SSO to construct correct ACS/root URLs.
   # core.casc.config.bundle is NOT set — the SCM Retriever manages that path.
