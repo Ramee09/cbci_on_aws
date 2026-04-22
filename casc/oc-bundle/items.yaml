@@ -19,8 +19,6 @@ items:
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
-          -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
-          -Dhazelcast.kubernetes.pod-label-value=devflow
         replication:
           config:
             replicas: 2
@@ -41,8 +39,6 @@ items:
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
-          -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
-          -Dhazelcast.kubernetes.pod-label-value=test1
         replication:
           config:
             replicas: 2

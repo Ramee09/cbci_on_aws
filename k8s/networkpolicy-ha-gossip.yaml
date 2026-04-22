@@ -1,6 +1,6 @@
 ---
 # Allow Hazelcast gossip (TCP 5701) between replicas of the devflow controller.
-# Pods are selected by the label CBCI OC stamps on every controller pod.
+# CBCI stamps controller pods with label: tenant=<controller-domain>
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -9,7 +9,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      com.cloudbees.master.app: devflow
+      tenant: devflow
   policyTypes:
     - Ingress
     - Egress
@@ -17,7 +17,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              com.cloudbees.master.app: devflow
+              tenant: devflow
       ports:
         - port: 5701
           protocol: TCP
@@ -25,7 +25,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              com.cloudbees.master.app: devflow
+              tenant: devflow
       ports:
         - port: 5701
           protocol: TCP
@@ -46,7 +46,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      com.cloudbees.master.app: test1
+      tenant: test1
   policyTypes:
     - Ingress
     - Egress
@@ -54,7 +54,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              com.cloudbees.master.app: test1
+              tenant: test1
       ports:
         - port: 5701
           protocol: TCP
@@ -62,7 +62,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              com.cloudbees.master.app: test1
+              tenant: test1
       ports:
         - port: 5701
           protocol: TCP
