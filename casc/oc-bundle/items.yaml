@@ -3,7 +3,7 @@ removeStrategy:
   items: NONE
 
 items:
-  - kind: managedMaster
+  - kind: managedController
     name: devflow
     displayName: DevFlow
     configuration:
@@ -11,18 +11,21 @@ items:
         disk: 20
         memory: 2048
         cpus: 1.0
+        domain: devflow
+        allowExternalAgents: false
+        nodeSelectors: "role=controller"
+        storageClassName: efs-ap
         javaOptions: >-
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
           -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
           -Dhazelcast.kubernetes.pod-label-value=devflow
-        nodeSelectors: "role=controller"
-        storageClassName: efs-ap
         replication:
-          replicas: 1
+          config:
+            replicas: 1
 
-  - kind: managedMaster
+  - kind: managedController
     name: test1
     displayName: Test1
     configuration:
@@ -30,13 +33,16 @@ items:
         disk: 20
         memory: 2048
         cpus: 1.0
+        domain: test1
+        allowExternalAgents: false
+        nodeSelectors: "role=controller"
+        storageClassName: efs-ap
         javaOptions: >-
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
           -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
           -Dhazelcast.kubernetes.pod-label-value=test1
-        nodeSelectors: "role=controller"
-        storageClassName: efs-ap
         replication:
-          replicas: 2
+          config:
+            replicas: 2
