@@ -1,11 +1,13 @@
 id: "oc-bundle"
-version: "35"
+version: "36"
 apiVersion: 2
 description: "Operations Center CasC bundle — fetched from GitHub via SCM Retriever"
 plugins:
   - "plugins.yaml"
 jcasc:
   - "jenkins.yaml"
+items:
+  - "items.yaml"
 # Increment 'version' on every push to casc/oc-bundle/ so OC hot-reloads.
 # OC only applies a bundle whose version is higher than what it has loaded.
 # reloadAlwaysOnRestart: true covers restarts without a bump; hot-reload needs it.

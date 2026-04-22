@@ -3,50 +3,40 @@ removeStrategy:
   items: NONE
 
 items:
-  # ── DevFlow controller ────────────────────────────────────────────────────
   - kind: managedMaster
-    name: "devflow"
-    displayName: "DevFlow"
-    properties:
-      - class: com.cloudbees.opscenter.server.properties.ConnectedMasterLicenseServerProperty
-      - class: com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
+    name: devflow
+    displayName: DevFlow
+    configuration:
+      kubernetes:
         disk: 20
-        memory: 3072
+        memory: 2048
         cpus: 1.0
-        numExecutors: 0
-        storageClassName: "efs-ap"
-        nodeSelector: "role=controller"
-        # Hazelcast requires pods to discover each other via the K8s API.
-        # pod-label-value must match the label CBCI OC stamps on controller pods.
         javaOptions: >-
+          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
           -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
           -Dhazelcast.kubernetes.pod-label-value=devflow
+        nodeSelectors: "role=controller"
+        storageClassName: efs-ap
         replication:
-          replicas: 2
-      - configurationAsCode:
-          bundle: "devflow"
+          replicas: 1
 
-  # ── Test1 controller ──────────────────────────────────────────────────────
   - kind: managedMaster
-    name: "test1"
-    displayName: "Test1"
-    properties:
-      - class: com.cloudbees.opscenter.server.properties.ConnectedMasterLicenseServerProperty
-      - class: com.cloudbees.masterprovisioning.kubernetes.KubernetesMasterProvisioning
+    name: test1
+    displayName: Test1
+    configuration:
+      kubernetes:
         disk: 20
-        memory: 3072
+        memory: 2048
         cpus: 1.0
-        numExecutors: 0
-        storageClassName: "efs-ap"
-        nodeSelector: "role=controller"
         javaOptions: >-
+          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
           -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
           -Dhazelcast.kubernetes.pod-label-value=test1
+        nodeSelectors: "role=controller"
+        storageClassName: efs-ap
         replication:
           replicas: 2
-      - configurationAsCode:
-          bundle: "test1"
