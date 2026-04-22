@@ -187,22 +187,17 @@ Gate: owner approves "proceed."
 
 ---
 
-## Phase 14 — CasC GitOps via GitHub Actions [DONE]
-GitHub Actions + AWS OIDC replaces manual ConfigMap delivery.
+## Phase 14 — CasC GitOps via SCM Retriever [DONE]
+SCM Retriever (built into CBCI) pulls bundles directly from GitHub — no cluster credentials needed.
 
-What was done:
-- GitHub OIDC provider registered in IAM
-- IAM role `cbci-lab-github-actions` with trust scoped to `Ramee09/cbci_on_aws` main branch
-- RBAC: Role `casc-bundle-updater` allows updating `oc-casc-bundle` ConfigMap in cloudbees namespace
-- Workflow `.github/workflows/casc-deploy.yaml`: triggers on push to `casc/oc-bundle/**` on main
-  - Authenticates via OIDC (no stored secrets)
-  - Stamps version from git commit count
-  - Applies ConfigMap to cluster
-  - OC reloads bundle automatically within 1-2 min
-- Note: `cloudbees-casc-server` plugin is installed on OC but the GitHub SCM plugin is not
-  in CloudBees CAP, so the native Bundle Service Git integration was not used.
+What is in place:
+- `values-oc.yaml`: SCM Retriever enabled, polling `Ramee09/cbci_on_aws` main branch every 3 minutes
+- OC pulls `casc/oc-bundle/` directly from GitHub on each poll cycle; reloads automatically on change
+- `.github/workflows/casc-validate.yaml`: PR gate — validates YAML syntax and checks for known-bad OC attributes
+- `casc-deploy.yaml` workflow removed (was a duplicate YAML validator with no deploy logic)
+- `rbac-github-actions.yaml` and `oc-casc-bundle` ConfigMap removed — no longer needed
 
-GitOps flow: edit casc/ → git push → GitHub Actions → ConfigMap updated → OC reloads
+GitOps flow: edit casc/ → git push → SCM Retriever polls (≤3 min) → OC reloads bundle
 
 --- PROJECT COMPLETE ---
 
