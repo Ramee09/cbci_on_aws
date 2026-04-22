@@ -1,0 +1,73 @@
+---
+# Allow Hazelcast gossip (TCP 5701) between replicas of the devflow controller.
+# Pods are selected by the label CBCI OC stamps on every controller pod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: devflow-ha-gossip
+  namespace: cloudbees
+spec:
+  podSelector:
+    matchLabels:
+      com.cloudbees.master.app: devflow
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              com.cloudbees.master.app: devflow
+      ports:
+        - port: 5701
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              com.cloudbees.master.app: devflow
+      ports:
+        - port: 5701
+          protocol: TCP
+    # Allow Hazelcast to call the K8s API for pod discovery
+    - ports:
+        - port: 443
+          protocol: TCP
+        - port: 6443
+          protocol: TCP
+
+---
+# Same policy for the test1 controller.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test1-ha-gossip
+  namespace: cloudbees
+spec:
+  podSelector:
+    matchLabels:
+      com.cloudbees.master.app: test1
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              com.cloudbees.master.app: test1
+      ports:
+        - port: 5701
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              com.cloudbees.master.app: test1
+      ports:
+        - port: 5701
+          protocol: TCP
+    - ports:
+        - port: 443
+          protocol: TCP
+        - port: 6443
+          protocol: TCP

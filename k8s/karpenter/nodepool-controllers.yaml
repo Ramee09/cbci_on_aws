@@ -26,5 +26,7 @@ spec:
     cpu: "16"
     memory: 64Gi
   disruption:
-    consolidationPolicy: WhenEmptyOrUnderutilized
-    consolidateAfter: 1m
+    # WhenEmpty prevents Karpenter from consolidating nodes that still host
+    # live HA controller pods, which would break Hazelcast cluster quorum.
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 5m

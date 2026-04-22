@@ -16,10 +16,15 @@ items:
         numExecutors: 0
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
+        # Hazelcast requires pods to discover each other via the K8s API.
+        # pod-label-value must match the label CBCI OC stamps on controller pods.
+        javaOptions: >-
+          -Dcom.cloudbees.ha=true
+          -Dhazelcast.kubernetes.namespace=cloudbees
+          -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
+          -Dhazelcast.kubernetes.pod-label-value=devflow
         replication:
           replicas: 2
-          maxReplicas: 4
-          targetCPUUtilizationPercentage: 70
       - configurationAsCode:
           bundle: "devflow"
 
@@ -36,9 +41,12 @@ items:
         numExecutors: 0
         storageClassName: "efs-ap"
         nodeSelector: "role=controller"
+        javaOptions: >-
+          -Dcom.cloudbees.ha=true
+          -Dhazelcast.kubernetes.namespace=cloudbees
+          -Dhazelcast.kubernetes.pod-label-name=com.cloudbees.master.app
+          -Dhazelcast.kubernetes.pod-label-value=test1
         replication:
           replicas: 2
-          maxReplicas: 4
-          targetCPUUtilizationPercentage: 70
       - configurationAsCode:
           bundle: "test1"

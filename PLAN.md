@@ -118,8 +118,16 @@ Note: `managedMaster` kind in OC items.yaml causes `CasCInvalidKindException` on
 
 ---
 
-## Phase 10 — Active-active HA [DONE]
-devflow and test1 both running 2 replicas (active-active). Replication set via OC Groovy: `config.replication = new Replication(2, 4, 70)`. Both controllers share EFS access points for RWX storage.
+## Phase 10 — True CBCI HA/HS (active-active) [DONE]
+devflow and test1 both running 2 replicas with genuine CloudBees CI HA/HS:
+- `-Dcom.cloudbees.ha=true` JVM flag on each controller (enables Hazelcast cluster mode)
+- Hazelcast K8s pod-discovery flags per controller (pod-label-name/value = com.cloudbees.master.app/<controller-name>)
+- NetworkPolicy `{devflow,test1}-ha-gossip`: allows TCP 5701 between replicas of the same controller; allows egress to K8s API for Hazelcast discovery
+- RBAC `hazelcast-pod-reader`: Role + RoleBinding giving the controller pod ServiceAccount get/list/watch on pods/endpoints/services in cloudbees namespace
+- Karpenter controllers NodePool: disruption changed from WhenEmptyOrUnderutilized → WhenEmpty to prevent consolidation of live HA pods
+- EFS RWX storage shared between replicas (was already in place)
+
+Apply order: `kubectl apply -f k8s/rbac-hazelcast.yaml`, `kubectl apply -f k8s/networkpolicy-ha-gossip.yaml`, `kubectl apply -f k8s/karpenter/nodepool-controllers.yaml`, then push updated `casc/oc-bundle/items.yaml` to trigger OC CasC reload → OC will reprovision controllers with HA JVM flags.
 
 ---
 
