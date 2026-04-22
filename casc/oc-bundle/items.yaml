@@ -23,7 +23,7 @@ items:
           -Dhazelcast.kubernetes.pod-label-value=devflow
         replication:
           config:
-            replicas: 1
+            replicas: 2
 
   - kind: managedController
     name: test1
