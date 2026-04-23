@@ -17,7 +17,6 @@ items:
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
         javaOptions: >-
-          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
         replication:
@@ -38,7 +37,6 @@ items:
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
         javaOptions: >-
-          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
         replication:
