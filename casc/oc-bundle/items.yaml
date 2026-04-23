@@ -19,6 +19,7 @@ items:
         javaOptions: >-
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
+          -Djenkins.install.runSetupWizard=false
         replication:
           config:
             replicas: 2
@@ -39,6 +40,7 @@ items:
         javaOptions: >-
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
+          -Djenkins.install.runSetupWizard=false
         replication:
           config:
             replicas: 2

@@ -136,6 +136,7 @@ export class CbciStack extends cdk.Stack {
             `-Dcom.cloudbees.networking.protocol=https`,
             `-Dcom.cloudbees.networking.hostname=${OC_HOSTNAME}`,
             `-Dcom.cloudbees.networking.useSubdomain=false`,
+            `-Dcom.cloudbees.networking.port=443`,
           ].join(' '),
 
           ContainerEnv: [{
