@@ -1,0 +1,86 @@
+removeStrategy:
+  rbac: SYNC
+  items: SYNC
+
+items:
+  # Scenario 3a: top-level folder with nested pipelines
+  - kind: folder
+    name: "platform"
+    displayName: "Platform"
+    description: "Platform engineering pipelines"
+    items:
+      - kind: pipeline
+        name: "hello-world"
+        displayName: "Hello World"
+        description: "Smoke test — confirms pod agent starts on EKS"
+        definition:
+          cpsFlowDefinition:
+            script: |
+              pipeline {
+                agent { label 'default-agent' }
+                options { timestamps() }
+                stages {
+                  stage('Verify') {
+                    steps {
+                      echo "Controller: ${env.JENKINS_URL}"
+                      echo "Node:       ${env.NODE_NAME}"
+                      sh 'uname -a && java -version'
+                    }
+                  }
+                }
+              }
+            sandbox: true
+
+      # Scenario 4c: pipeline that uses the credential declared in jenkins.yaml
+      - kind: pipeline
+        name: "github-api-test"
+        displayName: "GitHub API Test"
+        description: "Proves the github-token credential resolves correctly"
+        definition:
+          cpsFlowDefinition:
+            script: |
+              pipeline {
+                agent { label 'default-agent' }
+                options { timestamps() }
+                stages {
+                  stage('Call GitHub API') {
+                    steps {
+                      withCredentials([string(credentialsId: 'github-token', variable: 'TOKEN')]) {
+                        sh 'curl -sf -H "Authorization: Bearer $TOKEN" https://api.github.com/user | python3 -m json.tool'
+                      }
+                    }
+                  }
+                }
+              }
+            sandbox: true
+
+  # Scenario 3b: second folder — admin / ops
+  - kind: folder
+    name: "admin"
+    displayName: "Admin"
+    description: "Platform maintenance jobs"
+    items:
+      - kind: pipeline
+        name: "casc-status"
+        displayName: "CasC Bundle Status"
+        description: "Prints the active CasC bundle version on this controller"
+        definition:
+          cpsFlowDefinition:
+            script: |
+              pipeline {
+                agent none
+                stages {
+                  stage('Status') {
+                    steps {
+                      script {
+                        def status = httpRequest(
+                          url: "${env.JENKINS_URL}core-casc-export/api/json",
+                          authentication: 'N/A'
+                        )
+                        echo status.content
+                      }
+                    }
+                  }
+                }
+              }
+            sandbox: true

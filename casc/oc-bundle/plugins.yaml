@@ -132,3 +132,4 @@ plugins:
   - id: "unique-id"
   - id: "user-activity"
   - id: "variant"
+  - id: "pipeline-graph-view"

@@ -1,0 +1,34 @@
+jenkins:
+  systemMessage: "Controller1 — managed by CloudBees CI CasC"
+
+  # Scenario 4a: username/password credential — value from K8s secret env var
+  # The env var GITHUB_TOKEN is injected from a K8s secret into the controller pod.
+  # Never hardcode a password here — this file lives in Git.
+
+unclassified:
+  location:
+    url: "https://cjoc.myhomettbros.com/controller1/"
+    adminAddress: ""
+
+  # Scenario 4b: timestamper global config (inherited from base-bundle plugin)
+  timestamper:
+    allPipelines: true    # enable timestamps in every pipeline build automatically
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # Scenario 4a: GitHub token — value injected at runtime from K8s secret
+          - string:
+              scope: GLOBAL
+              id: "github-token"
+              description: "GitHub PAT — injected from K8s secret cbci-lab/github-token"
+              secret: "${GITHUB_TOKEN}"
+
+          # Scenario 4b: username+password credential
+          - usernamePassword:
+              scope: GLOBAL
+              id: "docker-registry"
+              description: "Docker Hub credentials — injected from K8s secret"
+              username: "${DOCKER_USERNAME}"
+              password: "${DOCKER_PASSWORD}"

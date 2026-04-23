@@ -1,0 +1,9 @@
+id: "controller1"
+version: "1"
+apiVersion: "1"
+parent: "base-bundle"
+description: "Controller1 — inherits base-bundle; adds its own folders and credentials"
+jcasc:
+  - "jenkins.yaml"
+items:
+  - "items.yaml"
