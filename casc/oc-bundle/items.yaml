@@ -20,9 +20,9 @@ items:
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
-      replication:
-        config:
-          replicas: 2
+        replication:
+          config:
+            replicas: 2
 
   - kind: managedController
     name: test1
@@ -41,6 +41,6 @@ items:
           -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
-      replication:
-        config:
-          replicas: 2
+        replication:
+          config:
+            replicas: 2
