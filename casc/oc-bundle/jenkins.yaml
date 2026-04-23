@@ -6,6 +6,7 @@ jenkins:
     saml:
       advancedConfiguration:
         spEntityId: https://cjoc.myhomettbros.com/cjoc/
+        forceAuthn: true        # always force fresh IdP auth; prevents stale-session SAMLAuthnInstantException
       binding: urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST
       displayNameAttributeName: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
       emailAttributeName: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress
