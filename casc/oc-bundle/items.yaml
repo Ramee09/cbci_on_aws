@@ -1,6 +1,6 @@
 removeStrategy:
   rbac: SYNC
-  items: NONE
+  items: SYNC
 
 items:
   - kind: managedController
@@ -9,20 +9,10 @@ items:
     approved: true
     configuration:
       kubernetes:
-        disk: 20
-        memory: 2048
-        cpus: 1.0
         domain: devflow
-        allowExternalAgents: false
-        nodeSelectors: "role=controller"
-        storageClassName: efs-ap
-        javaOptions: >-
-          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
-          -Dcom.cloudbees.ha=true
-          -Dhazelcast.kubernetes.namespace=cloudbees
-        replication:
-          config:
-            replicas: 2
+      replication:
+        config:
+          replicas: 2
 
   - kind: managedController
     name: test1
@@ -30,17 +20,7 @@ items:
     approved: true
     configuration:
       kubernetes:
-        disk: 20
-        memory: 2048
-        cpus: 1.0
         domain: test1
-        allowExternalAgents: false
-        nodeSelectors: "role=controller"
-        storageClassName: efs-ap
-        javaOptions: >-
-          -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
-          -Dcom.cloudbees.ha=true
-          -Dhazelcast.kubernetes.namespace=cloudbees
-        replication:
-          config:
-            replicas: 2
+      replication:
+        config:
+          replicas: 2

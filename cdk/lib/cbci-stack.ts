@@ -98,10 +98,12 @@ export class CbciStack extends cdk.Stack {
     });
     hazelcastRbac.node.addDependency(adminK8sSecret);
 
-    // ── HA gossip NetworkPolicies (Hazelcast TCP 5701 between replicas) ───────
+    // ── HA gossip NetworkPolicy (Hazelcast TCP 5701 between all controller replicas) ─
+    // Single namespace-scoped policy covers all current and future controllers —
+    // no CDK change needed when adding a new controller.
     const haGossipPolicies = new eks.KubernetesManifest(this, 'HaGossipPolicies', {
       cluster,
-      manifest: this.haGossipPolicies(),
+      manifest: this.haGossipPolicy(),
     });
     haGossipPolicies.node.addDependency(hazelcastRbac);
 
@@ -241,23 +243,26 @@ export class CbciStack extends cdk.Stack {
     ];
   }
 
-  // ── HA gossip NetworkPolicies — one per controller ────────────────────────
-  // Pods use label `tenant=<domain>` (CBCI's actual label, not com.cloudbees.master.app)
-  private haGossipPolicies(): object[] {
-    return ['devflow', 'test1'].map(name => ({
+  // ── HA gossip NetworkPolicy — single namespace-scoped rule ──────────────
+  // Allows all pods in the cloudbees namespace to exchange Hazelcast gossip on
+  // TCP 5701. Hazelcast rejects unknown cluster members at the protocol level,
+  // so cross-controller traffic is harmless. Covers all future controllers
+  // without any CDK change.
+  private haGossipPolicy(): object[] {
+    return [{
       apiVersion: 'networking.k8s.io/v1',
       kind:       'NetworkPolicy',
-      metadata:   { name: `${name}-ha-gossip`, namespace: 'cloudbees' },
+      metadata:   { name: 'controller-ha-gossip', namespace: 'cloudbees' },
       spec: {
-        podSelector:  { matchLabels: { tenant: name } },
-        policyTypes:  ['Ingress', 'Egress'],
+        podSelector: {},
+        policyTypes: ['Ingress', 'Egress'],
         ingress: [{
-          from:  [{ podSelector: { matchLabels: { tenant: name } } }],
+          from:  [{ podSelector: {} }],
           ports: [{ port: 5701, protocol: 'TCP' }],
         }],
         egress: [
           {
-            to:    [{ podSelector: { matchLabels: { tenant: name } } }],
+            to:    [{ podSelector: {} }],
             ports: [{ port: 5701, protocol: 'TCP' }],
           },
           {
@@ -266,6 +271,6 @@ export class CbciStack extends cdk.Stack {
           },
         ],
       },
-    }));
+    }];
   }
 }

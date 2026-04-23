@@ -77,7 +77,7 @@ jenkins:
       logoutUrl: https://login.microsoftonline.com/504de928-8905-4671-a42f-3583b128e4ae/saml2
       maximumAuthenticationLifetime: 86400
       usernameAttributeName: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress
-  systemMessage: CloudBees CI Operations Center - managed via CasC (GitOps active)
+  systemMessage: CloudBees CI Operations Center — managed via CasC
 
   # Note: jenkins.users is NOT supported in CBCI 2.555.x JCasC.
   # API token injection is done by scripts/setup-api-token.sh after OC starts.
@@ -85,6 +85,18 @@ jenkins:
   globalNodeProperties: []
 
 unclassified:
+  masterProvisioning:
+    kubernetes:
+      storageClassName: efs-ap
+      nodeSelectors: "role=controller"
+      disk: 20
+      memory: 2048
+      cpus: 1.0
+      allowExternalAgents: false
+      javaOptions: >-
+        -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
+        -Dcom.cloudbees.ha=true
+        -Dhazelcast.kubernetes.namespace=cloudbees
   cascAutoControllerProvisioning:
     provisionControllerOnCreation: true   # auto-provisions pod when OC detects new managedController in CasC
     fireAndForget: true
