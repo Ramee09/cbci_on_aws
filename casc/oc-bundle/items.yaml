@@ -23,8 +23,9 @@ items:
         replication:
           config:
             replicas: 2
-    casc:
-      bundle: "casc/controller-bundles/controller1"
+    properties:
+      - configurationAsCode:
+          bundle: "controller1"
 
   - kind: managedController
     name: test1
@@ -46,5 +47,6 @@ items:
         replication:
           config:
             replicas: 2
-    casc:
-      bundle: "casc/controller-bundles/test1"
+    properties:
+      - configurationAsCode:
+          bundle: "test1"
