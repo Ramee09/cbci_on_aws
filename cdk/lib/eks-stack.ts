@@ -40,7 +40,23 @@ export class EksStack extends cdk.Stack {
       { username: 'naga-admin', groups: ['system:masters'] },
     );
 
-    cdk.Tags.of(this.cluster.clusterSecurityGroup).add('karpenter.sh/discovery', CLUSTER_NAME);
+    // cluster.clusterSecurityGroup is an IMPORTED resource (fromSecurityGroupId).
+    // Tags.of() is a no-op on imported resources — the tag never reaches EC2.
+    // Use AwsCustomResource to call EC2:CreateTags so Karpenter can discover the SG.
+    new cdk.custom_resources.AwsCustomResource(this, 'TagClusterSg', {
+      onCreate: {
+        service:  'EC2',
+        action:   'createTags',
+        parameters: {
+          Resources: [this.cluster.clusterSecurityGroupId],
+          Tags: [{ Key: 'karpenter.sh/discovery', Value: CLUSTER_NAME }],
+        },
+        physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('TagClusterSg'),
+      },
+      policy: cdk.custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cdk.custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE,
+      }),
+    });
     this.nodeSecurityGroup = this.cluster.clusterSecurityGroup;
 
     // ── System node group (platform pods: CoreDNS, kube-proxy, OC, LBC) ─────
@@ -63,21 +79,28 @@ export class EksStack extends cdk.Stack {
     // ── Kubectl-backed resources — serialized to prevent Lambda rate limits ──
     //
     // All kubectl resources (addServiceAccount, addHelmChart, addManifest) share
-    // a single kubectl Lambda function. CDK's albController prop fires 2 calls
-    // (SA manifest + Helm) that we can't control. Firing all remaining user
-    // resources concurrently on top of those 2 produces ~11 simultaneous
-    // invocations and hits TooManyRequestsException from the Kubernetes API server.
+    // a single kubectl Lambda function. CDK's albController prop installs the
+    // ALB controller Helm chart concurrently with our resources. The ALB
+    // controller registers a mutating webhook for ALL Services; ExternalDns
+    // creates a Service during install and hits that webhook — but the ALB pods
+    // aren't ready yet, so the webhook call fails with "no endpoints available".
     //
-    // Fix: chain user resources so at most 3 kubectl calls run concurrently:
-    //   AwsAuth (uncontrollable) + ALB SA (uncontrollable) + EfsCsiSa
-    // Then serially: EfsCsiSa → ExternalDnsSa → MetricsServer → ExternalDns →
+    // Fix: anchor ExternalDnsSa to the ALB controller Helm chart
+    // (this.cluster.albController is public; 'Resource' is its HelmChart child).
+    // ExternalDns only installs after ALB controller is fully deployed + webhook ready.
+    //
+    // Full chain: AlbChart → ExternalDnsSa → MetricsServer → ExternalDns →
     //   Karpenter → NodeClass → NodePools (last two wired inside addKarpenter)
-    const efsCsiSa                                       = this.addEfsCsiAddon();
+    this.addEfsCsiAddon();
     const { sa: externalDnsSa, chart: externalDnsChart } = this.addExternalDns();
     const metricsChart                                   = this.addMetricsServer();
     const karpenterChart                                 = this.addKarpenter(props.vpc);
 
-    externalDnsSa.node.addDependency(efsCsiSa);
+    // Anchor the chain to the ALB controller chart so ExternalDns never runs
+    // before the ALB webhook is ready. albController is guaranteed non-null here
+    // because we set albController: { version: ... } in the Cluster props above.
+    const albChart = this.cluster.albController!.node.findChild('Resource');
+    externalDnsSa.node.addDependency(albChart);
     metricsChart.node.addDependency(externalDnsSa);
     externalDnsChart.node.addDependency(metricsChart);
     karpenterChart.node.addDependency(externalDnsChart);
@@ -91,14 +114,27 @@ export class EksStack extends cdk.Stack {
   }
 
   // ── EFS CSI add-on ─────────────────────────────────────────────────────────
-  // Returns the ServiceAccount so the caller can add it to the dependency chain.
-  private addEfsCsiAddon(): eks.ServiceAccount {
-    const sa = this.cluster.addServiceAccount('EfsCsiSa', {
-      name:      'efs-csi-controller-sa',
-      namespace: 'kube-system',
+  // The managed addon creates efs-csi-controller-sa internally. Using
+  // cluster.addServiceAccount() for the same name fires a kubectl manifest
+  // that conflicts → AlreadyExists. Instead, create the IRSA role directly
+  // via CfnJson + WebIdentityPrincipal and let the addon own the SA.
+  private addEfsCsiAddon(): void {
+    const oidcConditions = new cdk.CfnJson(this, 'EfsCsiOidcConditions', {
+      value: {
+        [`${this.cluster.clusterOpenIdConnectIssuer}:sub`]:
+          'system:serviceaccount:kube-system:efs-csi-controller-sa',
+        [`${this.cluster.clusterOpenIdConnectIssuer}:aud`]: 'sts.amazonaws.com',
+      },
     });
 
-    sa.addToPrincipalPolicy(new iam.PolicyStatement({
+    const role = new iam.Role(this, 'EfsCsiSaRole', {
+      assumedBy: new iam.WebIdentityPrincipal(
+        this.cluster.openIdConnectProvider.openIdConnectProviderArn,
+        { StringEquals: oidcConditions },
+      ),
+    });
+
+    role.addToPrincipalPolicy(new iam.PolicyStatement({
       actions: [
         'elasticfilesystem:DescribeAccessPoints',
         'elasticfilesystem:DescribeFileSystems',
@@ -117,11 +153,9 @@ export class EksStack extends cdk.Stack {
       clusterName:           this.cluster.clusterName,
       addonName:             'aws-efs-csi-driver',
       addonVersion:          'v2.0.7-eksbuild.1',
-      serviceAccountRoleArn: sa.role.roleArn,
+      serviceAccountRoleArn: role.roleArn,
       resolveConflicts:      'OVERWRITE',
     });
-
-    return sa;
   }
 
   // ── External DNS ────────────────────────────────────────────────────────────
@@ -273,7 +307,9 @@ export class EksStack extends cdk.Stack {
 
     const karpenterChart = this.cluster.addHelmChart('Karpenter', {
       chart:           'karpenter',
-      repository:      'oci://public.ecr.aws/karpenter',
+      // CDK helm handler runs `helm pull <repository> --version <version>` for OCI.
+      // The full chart path (including chart name) must be the repository value.
+      repository:      'oci://public.ecr.aws/karpenter/karpenter',
       namespace:       'karpenter',
       release:         'karpenter',
       version:         KARPENTER_VER,

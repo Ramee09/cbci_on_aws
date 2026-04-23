@@ -10,8 +10,8 @@ export interface CbciStackProps extends cdk.StackProps {
 }
 
 // ── Helm chart + image versions (all pinned per CLAUDE.md) ───────────────────
-const CBCI_CHART_VERSION = '3.15155.0+c4c87a7d6f57';  // bump to upgrade CBCI
-const CBCI_IMAGE_VERSION = '2.555.1.36485';
+const CBCI_CHART_VERSION = '3.15666.0+5ea03547ce92';  // bump to upgrade CBCI
+const CBCI_IMAGE_VERSION = '2.426.2.2';
 const OC_HOSTNAME        = 'cjoc.myhomettbros.com';
 const ACM_CERT_ARN       = 'arn:aws:acm:us-east-1:835090871306:certificate/8d0bab7f-cd88-45de-911f-1574b1f3db60';
 const GITHUB_REPO        = 'https://github.com/Ramee09/cbci_on_aws.git';
@@ -22,10 +22,19 @@ export class CbciStack extends cdk.Stack {
 
     const { cluster } = props;
 
+    // ── kubectl resources — fully serialized to prevent Lambda rate limits ────
+    //
+    // All 5 KubernetesManifests + 1 HelmChart share the same kubectl Lambda.
+    // Firing them concurrently hits TooManyRequestsException from the k8s API.
+    // Also: cloudbees namespace must exist before any namespaced resource is created.
+    //
+    // Chain: EfsStorageClass → CloudbeesNamespace → JenkinsAdminK8sSecret
+    //        → HazelcastRbac → HaGossipPolicies → CbciHelmChart
+
     // ── EFS StorageClass — dynamic AP provisioning via EFS CSI driver ────────
     // Uses KubernetesManifest constructor (not cluster.addManifest) so this
     // construct is scoped to CbciStack, avoiding EksStack→StorageStack cycle.
-    new eks.KubernetesManifest(this, 'EfsStorageClass', {
+    const efsStorageClass = new eks.KubernetesManifest(this, 'EfsStorageClass', {
       cluster,
       manifest: [{
         apiVersion: 'storage.k8s.io/v1',
@@ -52,7 +61,7 @@ export class CbciStack extends cdk.Stack {
     });
 
     // ── cloudbees namespace ───────────────────────────────────────────────────
-    new eks.KubernetesManifest(this, 'CloudbeesNamespace', {
+    const cloudbeesNs = new eks.KubernetesManifest(this, 'CloudbeesNamespace', {
       cluster,
       manifest: [{
         apiVersion: 'v1',
@@ -60,13 +69,14 @@ export class CbciStack extends cdk.Stack {
         metadata:   { name: 'cloudbees' },
       }],
     });
+    cloudbeesNs.node.addDependency(efsStorageClass);
 
     // ── Pull admin password from Secrets Manager, inject as k8s secret ───────
     const adminSecret = secretsmanager.Secret.fromSecretNameV2(
       this, 'JenkinsAdminSecret', 'cbci-lab/jenkins-admin-password',
     );
 
-    new eks.KubernetesManifest(this, 'JenkinsAdminK8sSecret', {
+    const adminK8sSecret = new eks.KubernetesManifest(this, 'JenkinsAdminK8sSecret', {
       cluster,
       manifest: [{
         apiVersion: 'v1',
@@ -79,21 +89,24 @@ export class CbciStack extends cdk.Stack {
         },
       }],
     });
+    adminK8sSecret.node.addDependency(cloudbeesNs);
 
     // ── Hazelcast RBAC (allows controller pods to list peers for discovery) ───
-    new eks.KubernetesManifest(this, 'HazelcastRbac', {
+    const hazelcastRbac = new eks.KubernetesManifest(this, 'HazelcastRbac', {
       cluster,
       manifest: this.hazelcastRbac(),
     });
+    hazelcastRbac.node.addDependency(adminK8sSecret);
 
     // ── HA gossip NetworkPolicies (Hazelcast TCP 5701 between replicas) ───────
-    new eks.KubernetesManifest(this, 'HaGossipPolicies', {
+    const haGossipPolicies = new eks.KubernetesManifest(this, 'HaGossipPolicies', {
       cluster,
       manifest: this.haGossipPolicies(),
     });
+    haGossipPolicies.node.addDependency(hazelcastRbac);
 
     // ── CBCI Helm chart ───────────────────────────────────────────────────────
-    new eks.HelmChart(this, 'Cbci', {
+    const cbciChart = new eks.HelmChart(this, 'Cbci', {
       cluster,
       chart:      'cloudbees-core',
       repository: 'https://charts.cloudbees.com/public/cloudbees',
@@ -130,7 +143,9 @@ export class CbciStack extends cdk.Stack {
             },
           }],
 
-          NodeSelector: { role: 'system' },
+          // OC runs on Karpenter controller nodes (t3.large/xlarge, role=controller).
+          // System nodes (t3.medium) don't have headroom after platform pods.
+          NodeSelector: { role: 'controller' },
 
           Resources: {
             Requests: { Cpu: '1',  Memory: '2G' },
@@ -188,6 +203,7 @@ export class CbciStack extends cdk.Stack {
         },
       },
     });
+    cbciChart.node.addDependency(haGossipPolicies);
 
     new cdk.CfnOutput(this, 'OcUrl', {
       value: `https://${OC_HOSTNAME}/cjoc/`,
