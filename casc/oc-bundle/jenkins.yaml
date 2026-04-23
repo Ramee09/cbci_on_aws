@@ -85,18 +85,6 @@ jenkins:
   globalNodeProperties: []
 
 unclassified:
-  masterProvisioning:
-    kubernetes:
-      storageClassName: efs-ap
-      nodeSelectors: "role=controller"
-      disk: 20
-      memory: 2048
-      cpus: 1.0
-      allowExternalAgents: false
-      javaOptions: >-
-        -Dcore.casc.config.bundle=/var/jenkins_home/casc-bundle
-        -Dcom.cloudbees.ha=true
-        -Dhazelcast.kubernetes.namespace=cloudbees
   cascAutoControllerProvisioning:
     provisionControllerOnCreation: true   # auto-provisions pod when OC detects new managedController in CasC
     fireAndForget: true
