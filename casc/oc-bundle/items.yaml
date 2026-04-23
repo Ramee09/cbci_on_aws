@@ -4,27 +4,6 @@ removeStrategy:
 
 items:
   - kind: managedController
-    name: devflow
-    displayName: DevFlow
-    approved: true
-    configuration:
-      kubernetes:
-        disk: 20
-        memory: 2048
-        cpus: 1.0
-        domain: devflow
-        allowExternalAgents: false
-        nodeSelectors: "role=controller"
-        storageClassName: efs-ap
-        javaOptions: >-
-          -Dcom.cloudbees.ha=true
-          -Dhazelcast.kubernetes.namespace=cloudbees
-          -Djenkins.install.runSetupWizard=false
-        replication:
-          config:
-            replicas: 2
-
-  - kind: managedController
     name: controller1
     displayName: Controller1
     approved: true
