@@ -6,6 +6,7 @@ items:
   - kind: managedController
     name: devflow
     displayName: DevFlow
+    approved: true
     configuration:
       kubernetes:
         disk: 20
@@ -26,6 +27,7 @@ items:
   - kind: managedController
     name: test1
     displayName: Test1
+    approved: true
     configuration:
       kubernetes:
         disk: 20
