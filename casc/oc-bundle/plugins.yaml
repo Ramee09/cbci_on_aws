@@ -5,4 +5,4 @@ plugins:
   # saml and ldap are in the envelope but explicitly declared to ensure they stay installed.
   - id: "saml"
   - id: "ldap"
-  - id: "cloudbees-casc-scm-retriever"
+

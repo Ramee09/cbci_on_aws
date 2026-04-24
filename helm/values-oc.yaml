@@ -27,6 +27,49 @@ OperationsCenter:
           name: jenkins-admin-secret
           key: password
 
+  # git-sync init container: clones the repo once before OC starts so
+  # bundleStorageService can read controller bundles on the very first startup.
+  ExtraInitContainers:
+    - name: casc-bundles-init
+      image: registry.k8s.io/git-sync/git-sync:v4.4.0
+      args:
+        - --repo=https://github.com/Ramee09/cbci_on_aws.git
+        - --ref=main
+        - --depth=1
+        - --root=/git-data
+        - --link=repo
+        - --one-time
+      volumeMounts:
+        - name: casc-bundles-git
+          mountPath: /git-data
+
+  # git-sync sidecar: keeps the repo in sync with GitHub every 60 seconds.
+  # When a new commit lands, the OC's next bundleStorageService poll (120s)
+  # detects the checksum change and hot-reloads the affected controller bundles.
+  ExtraContainers:
+    - name: casc-bundles-sync
+      image: registry.k8s.io/git-sync/git-sync:v4.4.0
+      args:
+        - --repo=https://github.com/Ramee09/cbci_on_aws.git
+        - --ref=main
+        - --depth=1
+        - --root=/git-data
+        - --link=repo
+        - --period=60s
+      volumeMounts:
+        - name: casc-bundles-git
+          mountPath: /git-data
+
+  ExtraVolumes:
+    - name: casc-bundles-git
+      emptyDir: {}
+
+  # Mount the git-sync volume into the OC container so localFolderRetriever can read it.
+  ExtraVolumeMounts:
+    - name: casc-bundles-git
+      mountPath: /var/casc-bundles-git
+      readOnly: true
+
 
   # Schedule OC on the Karpenter controllers NodePool (on-demand, t3.large/xlarge)
   NodeSelector:
