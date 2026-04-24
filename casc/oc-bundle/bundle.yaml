@@ -1,5 +1,5 @@
 id: "oc-bundle"
-version: "56"
+version: "57"
 apiVersion: 2
 description: "Operations Center CasC bundle — fetched from GitHub via SCM Retriever"
 plugins:
