@@ -1,2 +1,7 @@
 plugins:
   - id: "timestamper"
+  - id: "configuration-as-code"
+  - id: "cloudbees-casc-client"
+  - id: "cloudbees-casc-items-api"
+  - id: "cloudbees-casc-items-commons"
+  - id: "cloudbees-casc-items-controller"

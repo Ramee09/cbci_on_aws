@@ -1,6 +1,6 @@
 id: "controller-1"
-version: "3"
-apiVersion: "1"
+version: "4"
+apiVersion: 2
 availabilityPattern: ".*"
 parent: "controller-bundles/base-bundle"
 description: "Controller-1 managed controller — inherits base-bundle; adds its own folders and credentials"
