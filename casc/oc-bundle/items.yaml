@@ -1,3 +1,9 @@
 removeStrategy:
   rbac: SYNC
   items: SYNC
+
+items:
+  - kind: folder
+    name: platform
+    displayName: "Platform"
+    description: "Platform team folder"
