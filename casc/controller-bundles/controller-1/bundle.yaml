@@ -1,5 +1,5 @@
 id: "controller-1"
-version: "1"
+version: "2"
 apiVersion: "1"
 availabilityPattern: ".*"
 parent: "controller-bundles/base-bundle"

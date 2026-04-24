@@ -3,32 +3,3 @@ jenkins:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
 
-  # Scenario 5: shared pipeline library — available on every controller via @Library('cbci-shared')
-  globalLibraries:
-    libraries:
-      - name: "cbci-shared"
-        defaultVersion: "main"
-        implicit: false
-        retriever:
-          modernSCM:
-            scm:
-              git:
-                remote: "https://github.com/Ramee09/cbci_on_aws.git"
-                credentialsId: ""   # public repo — no creds needed
-
-  clouds:
-    - kubernetes:
-        name: "kubernetes"
-        podRetention: "never"
-        templates:
-          - name: "default"
-            label: "default-agent"
-            nodeSelector: "role=agent"
-            containers:
-              - name: "jnlp"
-                image: "cloudbees/cloudbees-agent:latest"
-                alwaysPullImage: false
-                resourceRequestCpu: "500m"
-                resourceLimitCpu: "1"
-                resourceRequestMemory: "512Mi"
-                resourceLimitMemory: "1Gi"
