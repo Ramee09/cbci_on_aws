@@ -104,10 +104,6 @@ unclassified:
         retriever:
           localFolderRetriever:
             localFolder: "/var/casc-bundles-git/repo/casc/controller-bundles"
-  dockerImageDefinitionConfiguration:
-    dockerImageDefinitions:
-      - name: "CloudBees CI - Managed Controller - 2.555.1.36485"
-        imageTag: "cloudbees/cloudbees-core-mm:2.555.1.36485"
   location:
     adminAddress: ''
     url: https://cjoc.myhomettbros.com/cjoc/
