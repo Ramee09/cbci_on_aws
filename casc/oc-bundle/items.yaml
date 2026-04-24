@@ -21,7 +21,7 @@ items:
         allowExternalAgents: false
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
-        image: "cloudbees/cloudbees-core-mm:2.555.1.36485"
+        image: "CloudBees CI - Managed Controller - 2.555.1.36485"
         javaOptions: >-
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
@@ -46,7 +46,7 @@ items:
         allowExternalAgents: false
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
-        image: "cloudbees/cloudbees-core-mm:2.555.1.36485"
+        image: "CloudBees CI - Managed Controller - 2.555.1.36485"
         javaOptions: >-
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
