@@ -1,5 +1,5 @@
 jenkins:
-  systemMessage: "Controller1 — managed by CloudBees CI CasC"
+  systemMessage: "Controller1 — managed by CloudBees CI CasC (GitOps)"
 
   # Scenario 4a: username/password credential — value from K8s secret env var
   # The env var GITHUB_TOKEN is injected from a K8s secret into the controller pod.
@@ -9,10 +9,6 @@ unclassified:
   location:
     url: "https://cjoc.myhomettbros.com/controller1/"
     adminAddress: ""
-
-  # Scenario 4b: timestamper global config (inherited from base-bundle plugin)
-  timestamper:
-    allPipelines: true    # enable timestamps in every pipeline build automatically
 
 credentials:
   system:
