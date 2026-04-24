@@ -103,7 +103,7 @@ unclassified:
       - name: "controller-bundles"
         retriever:
           localFolderRetriever:
-            localFolder: "/var/jenkins_home/cb-casc-bundles-store"
+            localFolder: "/var/jenkins_home/casc-src"
   location:
     adminAddress: ''
     url: https://cjoc.myhomettbros.com/cjoc/
