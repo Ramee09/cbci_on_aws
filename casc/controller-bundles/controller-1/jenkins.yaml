@@ -1,0 +1,24 @@
+jenkins:
+  systemMessage: "Controller-1 — managed by CloudBees CI CasC"
+
+unclassified:
+  location:
+    url: "https://cjoc.myhomettbros.com/controller-1/"
+    adminAddress: ""
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: "github-token"
+              description: "GitHub PAT — injected from K8s secret cbci-lab/github-token"
+              secret: "${GITHUB_TOKEN}"
+
+          - usernamePassword:
+              scope: GLOBAL
+              id: "docker-registry"
+              description: "Docker Hub credentials — injected from K8s secret"
+              username: "${DOCKER_USERNAME}"
+              password: "${DOCKER_PASSWORD}"

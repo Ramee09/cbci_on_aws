@@ -1,0 +1,36 @@
+removeStrategy:
+  rbac: SYNC
+  items: SYNC
+
+items:
+  - kind: folder
+    name: "platform"
+    displayName: "Platform"
+    description: "Platform engineering pipelines"
+    items:
+      - kind: pipeline
+        name: "hello-world"
+        displayName: "Hello World"
+        description: "Smoke test — confirms pod agent starts on EKS"
+        definition:
+          cpsFlowDefinition:
+            script: |
+              pipeline {
+                agent { label 'default-agent' }
+                options { timestamps() }
+                stages {
+                  stage('Verify') {
+                    steps {
+                      echo "Controller: ${env.JENKINS_URL}"
+                      echo "Node:       ${env.NODE_NAME}"
+                      sh 'uname -a && java -version'
+                    }
+                  }
+                }
+              }
+            sandbox: true
+
+  - kind: folder
+    name: "admin"
+    displayName: "Admin"
+    description: "Platform maintenance jobs"

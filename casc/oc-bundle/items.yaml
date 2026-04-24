@@ -7,3 +7,51 @@ items:
     name: platform
     displayName: "Platform"
     description: "Platform team folder"
+
+  - kind: managedController
+    name: controller1
+    displayName: "Controller1"
+    approved: true
+    configuration:
+      kubernetes:
+        disk: 20
+        memory: 2048
+        cpus: 1.0
+        domain: controller1
+        allowExternalAgents: false
+        nodeSelectors: "role=controller"
+        storageClassName: efs-ap
+        javaOptions: >-
+          -Dcom.cloudbees.ha=true
+          -Dhazelcast.kubernetes.namespace=cloudbees
+          -Djenkins.install.runSetupWizard=false
+        replication:
+          config:
+            replicas: 2
+    properties:
+      - configurationAsCode:
+          bundle: "controller1"
+
+  - kind: managedController
+    name: controller-1
+    displayName: "Controller-1"
+    approved: true
+    configuration:
+      kubernetes:
+        disk: 20
+        memory: 2048
+        cpus: 1.0
+        domain: controller-1
+        allowExternalAgents: false
+        nodeSelectors: "role=controller"
+        storageClassName: efs-ap
+        javaOptions: >-
+          -Dcom.cloudbees.ha=true
+          -Dhazelcast.kubernetes.namespace=cloudbees
+          -Djenkins.install.runSetupWizard=false
+        replication:
+          config:
+            replicas: 2
+    properties:
+      - configurationAsCode:
+          bundle: "controller-1"
