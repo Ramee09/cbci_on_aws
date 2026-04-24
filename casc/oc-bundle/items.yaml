@@ -30,7 +30,7 @@ items:
             replicas: 2
     properties:
       - configurationAsCode:
-          bundle: "controller1"
+          bundle: "controller-bundles/controller1"
 
   - kind: managedController
     name: controller-1
@@ -54,4 +54,4 @@ items:
             replicas: 2
     properties:
       - configurationAsCode:
-          bundle: "controller-1"
+          bundle: "controller-bundles/controller-1"
