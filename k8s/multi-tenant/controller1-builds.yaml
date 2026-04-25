@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: controller1-builds
+  labels:
+    cloudbees.com/role: agents
+    cloudbees.com/controller: controller1
+---
+# Agent pods run under this SA so they have no controller-level permissions
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-agents
+  namespace: controller1-builds
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-agents
+  namespace: controller1-builds
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+---
+# The controller1 service account (in cloudbees ns) can manage pods in this namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: controller1-manages-builds
+  namespace: controller1-builds
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-agents
+subjects:
+- kind: ServiceAccount
+  name: controller1
+  namespace: cloudbees
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-agents-builds
+  namespace: controller1-builds
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-agents
+subjects:
+- kind: ServiceAccount
+  name: jenkins-agents
+  namespace: controller1-builds
+---
+# Hard cap: this controller's agents cannot exceed 16 CPU / 64Gi total.
+# Karpenter NodePool limit (32 CPU / 128Gi) is the cluster-level ceiling.
+# Two controllers at 16 CPU each share the pool fairly.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: agent-quota
+  namespace: controller1-builds
+spec:
+  hard:
+    requests.cpu: "16"
+    requests.memory: 64Gi
+    limits.cpu: "16"
+    limits.memory: 64Gi
+    pods: "40"
+---
+# Default limits for containers that don't declare their own.
+# Prevents a single rogue pod from consuming unbounded resources.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: agent-limits
+  namespace: controller1-builds
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "1"
+      memory: 2Gi
+    defaultRequest:
+      cpu: 500m
+      memory: 512Mi
+    max:
+      cpu: "4"
+      memory: 8Gi
+    min:
+      cpu: 100m
+      memory: 128Mi

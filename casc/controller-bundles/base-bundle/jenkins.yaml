@@ -4,6 +4,35 @@ jenkins:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
 
+  # Default agent pod template: applied to any pipeline that uses
+  # `agent { label 'default-agent' }`. Enforces resource limits and
+  # routes to the agents NodePool via toleration.
+  clouds:
+  - kubernetes:
+      name: "kubernetes"
+      templates:
+      - name: "default-agent"
+        label: "default-agent"
+        nodeSelector: "role=agent"
+        serviceAccount: "jenkins-agents"
+        containers:
+        - name: "jnlp"
+          image: "cloudbees/cloudbees-core-agent:2.555.1.36485"
+          resourceRequestCpu: "500m"
+          resourceRequestMemory: "512Mi"
+          resourceLimitCpu: "2"
+          resourceLimitMemory: "2Gi"
+          alwaysPullImage: false
+          workingDir: "/home/jenkins/agent"
+          command: ""
+          args: "^${computer.jnlpmac} ^${computer.name}"
+        yaml: |
+          spec:
+            tolerations:
+            - key: workload
+              value: agents
+              effect: NoSchedule
+
 unclassified:
   bundleUpdateTiming:
     automaticReload: true
@@ -11,4 +40,16 @@ unclassified:
     automaticRestart: true
     skipNewVersions: false
     rejectWarnings: false
+
+  # Layer 4: enforce a 2-hour wall-clock timeout on all pipelines.
+  # overrideAllowed: false means users cannot bypass this via options { timeout(...) }
+  # with a longer value. This prevents runaway/zombie jobs from holding agents forever.
+  pipelinePolicies:
+    policies:
+    - name: "global-timeout"
+      enabled: true
+      rules:
+      - kind: timeout
+        minutes: 120
+        overrideAllowed: false
 

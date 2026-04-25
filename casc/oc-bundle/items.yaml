@@ -26,6 +26,7 @@ items:
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
           -Djenkins.install.runSetupWizard=false
+          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=controller1-builds
         replication:
           config:
             replicas: 2
@@ -51,6 +52,7 @@ items:
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=cloudbees
           -Djenkins.install.runSetupWizard=false
+          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=controller-1-builds
         replication:
           config:
             replicas: 2
