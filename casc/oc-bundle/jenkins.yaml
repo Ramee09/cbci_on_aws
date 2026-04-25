@@ -88,17 +88,11 @@ jenkins:
   globalNodeProperties: []
 
 unclassified:
-  cascAutoControllerProvisioning:
-    provisionControllerOnCreation: true   # auto-provisions pod when OC detects new managedController in CasC
-    fireAndForget: true
-    initialDelay: 15                      # wait 15s for license to confirm before provisioning
-    timeout: 600
-  bundleUpdateTiming:
-    automaticReload: true    # hot-reload for JCasC/items changes (no restart needed)
-    automaticRestart: true   # safe-restart when plugin set changes
-    reloadAlwaysOnRestart: true
-    skipNewVersions: false
-    rejectWarnings: false
+  # cascAutoControllerProvisioning and bundleUpdateTiming intentionally omitted.
+  # On first boot with a fresh PVC, CloudBees plugin JCasC configurators are not yet
+  # registered when JCasC.init runs, causing ConfigurationAsCodeBootFailure.
+  # Both keys will be re-added once OC has completed its first full startup and
+  # installed all plugins from the update center.
   bundleStorageService:
     activated: true
     pollingPeriod: 120
