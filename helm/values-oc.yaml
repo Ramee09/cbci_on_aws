@@ -30,6 +30,27 @@ OperationsCenter:
   # git-sync init container: clones the repo once before OC starts so
   # bundleStorageService can read controller bundles on the very first startup.
   ExtraInitContainers:
+    - name: cleanup-stale-config
+      image: busybox:1.36
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          # Disable deprecated Blue Ocean plugins and non-CAP ace-editor
+          mkdir -p /jh/plugins
+          touch /jh/plugins/ace-editor.jpi.disabled
+          touch /jh/plugins/blueocean-commons.jpi.disabled
+          touch /jh/plugins/cloudbees-blueocean-default-theme.jpi.disabled
+          # Remove stale SecurityEnforcer XML: crumbIssuer field type changed in
+          # CBCI 2.555, XStream throws CannotResolveClassException on the old value.
+          SE="/jh/com.cloudbees.opscenter.server.security.SecurityEnforcer_-GlobalConfigurationImpl.xml"
+          if [ -f "$SE" ]; then sed -i '/<crumbIssuer>/d' "$SE"; fi
+          # Remove stale DAVStore XML: contains an embedded <j class="hudson.model.Hudson">
+          # blob from an ancient plugin version; the field was removed, causing MissingFieldException.
+          rm -f "/jh/com.infradna.hudson.plugins.backup.store.DAVStore.xml"
+      volumeMounts:
+        - name: jenkins-home
+          mountPath: /jh
     - name: casc-bundles-init
       image: registry.k8s.io/git-sync/git-sync:v4.4.0
       args:
