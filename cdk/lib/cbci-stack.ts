@@ -10,11 +10,12 @@ export interface CbciStackProps extends cdk.StackProps {
 }
 
 // ── Helm chart + image versions (all pinned per CLAUDE.md) ───────────────────
-const CBCI_CHART_VERSION = '3.15666.0+5ea03547ce92';  // bump to upgrade CBCI
-const CBCI_IMAGE_VERSION = '2.426.2.2';
+const CBCI_CHART_VERSION = '3.36486.0+0e91c42e72db';  // bump to upgrade CBCI
+const CBCI_IMAGE_VERSION = '2.555.1.36485';            // controller image — also set in items.yaml
 const OC_HOSTNAME        = 'cjoc.myhomettbros.com';
 const ACM_CERT_ARN       = 'arn:aws:acm:us-east-1:835090871306:certificate/8d0bab7f-cd88-45de-911f-1574b1f3db60';
 const GITHUB_REPO        = 'https://github.com/Ramee09/cbci_on_aws.git';
+const GIT_SYNC_IMAGE     = 'registry.k8s.io/git-sync/git-sync:v4.4.0';
 
 export class CbciStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CbciStackProps) {
@@ -111,7 +112,7 @@ export class CbciStack extends cdk.Stack {
     const cbciChart = new eks.HelmChart(this, 'Cbci', {
       cluster,
       chart:      'cloudbees-core',
-      repository: 'https://charts.cloudbees.com/public/cloudbees',
+      repository: 'https://public-charts.artifacts.cloudbees.com/repository/public',
       namespace:  'cloudbees',
       release:    'cbci',
       version:    CBCI_CHART_VERSION,
@@ -145,6 +146,41 @@ export class CbciStack extends cdk.Stack {
               secretKeyRef: { name: 'jenkins-admin-secret', key: 'password' },
             },
           }],
+
+          // git-sync init container: clones repo once before OC starts so
+          // bundleStorageService can read controller bundles on first startup.
+          ExtraInitContainers: [{
+            name:  'casc-bundles-init',
+            image: GIT_SYNC_IMAGE,
+            args: [
+              `--repo=${GITHUB_REPO}`,
+              '--ref=main',
+              '--depth=1',
+              '--root=/git-data',
+              '--link=repo',
+              '--one-time',
+            ],
+            volumeMounts: [{ name: 'casc-bundles-git', mountPath: '/git-data' }],
+          }],
+
+          // git-sync sidecar: keeps the repo in sync every 60s so
+          // bundleStorageService hot-reloads controller bundles without OC restart.
+          ExtraContainers: [{
+            name:  'casc-bundles-sync',
+            image: GIT_SYNC_IMAGE,
+            args: [
+              `--repo=${GITHUB_REPO}`,
+              '--ref=main',
+              '--depth=1',
+              '--root=/git-data',
+              '--link=repo',
+              '--period=60s',
+            ],
+            volumeMounts: [{ name: 'casc-bundles-git', mountPath: '/git-data' }],
+          }],
+
+          ExtraVolumes:      [{ name: 'casc-bundles-git', emptyDir: {} }],
+          ExtraVolumeMounts: [{ name: 'casc-bundles-git', mountPath: '/var/casc-bundles-git', readOnly: true }],
 
           // OC runs on Karpenter controller nodes (t3.large/xlarge, role=controller).
           // System nodes (t3.medium) don't have headroom after platform pods.

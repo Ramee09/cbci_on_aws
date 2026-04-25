@@ -9,7 +9,7 @@ import { KubectlV31Layer } from '@aws-cdk/lambda-layer-kubectl-v31';
 import { Construct } from 'constructs';
 
 const CLUSTER_NAME  = 'cbci-lab';
-const KARPENTER_VER = '1.1.0';
+const KARPENTER_VER = '1.4.0';
 
 export interface EksStackProps extends cdk.StackProps {
   vpc: ec2.Vpc;
@@ -152,7 +152,7 @@ export class EksStack extends cdk.Stack {
     new eks.CfnAddon(this, 'EfsCsiAddon', {
       clusterName:           this.cluster.clusterName,
       addonName:             'aws-efs-csi-driver',
-      addonVersion:          'v2.0.7-eksbuild.1',
+      addonVersion:          'v3.0.0-eksbuild.1',
       serviceAccountRoleArn: role.roleArn,
       resolveConflicts:      'OVERWRITE',
     });
@@ -257,7 +257,7 @@ export class EksStack extends cdk.Stack {
     // can be used as a map key in the IAM trust policy condition.
     const karpenterOidcConditions = new cdk.CfnJson(this, 'KarpenterOidcConditions', {
       value: {
-        [`${this.cluster.clusterOpenIdConnectIssuer}:sub`]: 'system:serviceaccount:karpenter:karpenter',
+        [`${this.cluster.clusterOpenIdConnectIssuer}:sub`]: 'system:serviceaccount:kube-system:karpenter',
         [`${this.cluster.clusterOpenIdConnectIssuer}:aud`]: 'sts.amazonaws.com',
       },
     });
@@ -310,15 +310,16 @@ export class EksStack extends cdk.Stack {
       // CDK helm handler runs `helm pull <repository> --version <version>` for OCI.
       // The full chart path (including chart name) must be the repository value.
       repository:      'oci://public.ecr.aws/karpenter/karpenter',
-      namespace:       'karpenter',
+      namespace:       'kube-system',
       release:         'karpenter',
       version:         KARPENTER_VER,
-      createNamespace: true,
+      createNamespace: false,
       values: {
         settings: { clusterName: CLUSTER_NAME, interruptionQueue: CLUSTER_NAME },
         serviceAccount: { annotations: { 'eks.amazonaws.com/role-arn': controllerRole.roleArn } },
-        controller:  { resources: { requests: { cpu: '1', memory: '1Gi' }, limits: { cpu: '1', memory: '1Gi' } } },
+        controller:  { resources: { requests: { cpu: '100m', memory: '256Mi' }, limits: { cpu: '1', memory: '1Gi' } } },
         nodeSelector: { role: 'system' },
+        tolerations: [{ key: 'CriticalAddonsOnly', operator: 'Exists' }],
       },
     });
     karpenterChart.node.addDependency(instanceProfile);
