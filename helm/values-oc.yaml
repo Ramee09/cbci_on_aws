@@ -18,7 +18,7 @@ OperationsCenter:
 
   # Networking opts required for SAML SSO to construct correct ACS/root URLs.
   # core.casc.config.bundle is NOT set — the SCM Retriever manages that path.
-  JavaOpts: "-Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.useSubdomain=false"
+  JavaOpts: "-Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.port=443 -Dcom.cloudbees.networking.useSubdomain=false"
 
   ContainerEnv:
     - name: JENKINS_ADMIN_PASSWORD
