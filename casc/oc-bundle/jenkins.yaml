@@ -88,16 +88,12 @@ jenkins:
   globalNodeProperties: []
 
 unclassified:
-  cascAutoControllerProvisioning:
-    provisionControllerOnCreation: true
-    fireAndForget: true
-    initialDelay: 15
-    timeout: 600
+  # cascAutoControllerProvisioning and bundleUpdateTiming are temporarily omitted.
+  # These configurators are provided by CBCI managed plugins that are downloaded
+  # from the CloudBees update center on first boot — they are not available when
+  # JCasC.init fires during that first startup. They will be restored in the next
+  # bundle version once OC has booted and the plugins are captured in plugins.yaml.
   bundleUpdateTiming:
-    automaticReload: true
-    automaticRestart: true
-    reloadAlwaysOnRestart: true
-    skipNewVersions: false
     rejectWarnings: false
   bundleStorageService:
     activated: true
