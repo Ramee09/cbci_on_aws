@@ -17,9 +17,9 @@ OperationsCenter:
       scmPollingInterval: "PT1M"
       githubWebhooksEnabled: "false"
 
-  # Networking opts required for SAML SSO to construct correct ACS/root URLs.
-  # core.casc.config.bundle is NOT set — the SCM Retriever manages that path.
-  JavaOpts: "-Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.port=443 -Dcom.cloudbees.networking.useSubdomain=false"
+  # Protocol: https above makes the Helm template generate all com.cloudbees.networking.*
+  # JVM properties correctly (protocol, hostname, port=443, useSubdomain).
+  # No JavaOpts override needed — the chart handles it.
 
   ContainerEnv:
     - name: JENKINS_ADMIN_PASSWORD
@@ -142,6 +142,8 @@ Master:
       alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:835090871306:certificate/8d0bab7f-cd88-45de-911f-1574b1f3db60"
       alb.ingress.kubernetes.io/tags: "Project=cbci-lab,ManagedBy=helm"
       alb.ingress.kubernetes.io/group.name: cbci-oc
+      # No healthcheck-path here — ALB default is / which Jenkins 302-redirects to the
+      # controller's context root; success-codes includes 302 so targets stay healthy.
       alb.ingress.kubernetes.io/success-codes: "200,302"
       alb.ingress.kubernetes.io/target-group-attributes: "stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=86400,stickiness.type=lb_cookie"
     tls:
