@@ -106,7 +106,7 @@ OperationsCenter:
 
   ServiceType: ClusterIP
 
-  HostName: null
+  HostName: cjoc.myhomettbros.com
 
   Ingress:
     Class: alb
