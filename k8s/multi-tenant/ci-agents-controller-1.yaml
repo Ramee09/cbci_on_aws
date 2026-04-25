@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ci-agents-controller-1
+  labels:
+    cloudbees.com/role: agents
+    cloudbees.com/controller: controller-1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-agents
+  namespace: ci-agents-controller-1
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-agents
+  namespace: ci-agents-controller-1
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+---
+# controller-1 SA (in ci-controllers) can schedule agent pods into this namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: controller-1-manages-agents
+  namespace: ci-agents-controller-1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-agents
+subjects:
+- kind: ServiceAccount
+  name: controller-1
+  namespace: ci-controllers
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-agents-self
+  namespace: ci-agents-controller-1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-agents
+subjects:
+- kind: ServiceAccount
+  name: jenkins-agents
+  namespace: ci-agents-controller-1
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: agent-quota
+  namespace: ci-agents-controller-1
+spec:
+  hard:
+    requests.cpu: "16"
+    requests.memory: 64Gi
+    limits.cpu: "16"
+    limits.memory: 64Gi
+    pods: "40"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: agent-limits
+  namespace: ci-agents-controller-1
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "1"
+      memory: 2Gi
+    defaultRequest:
+      cpu: 500m
+      memory: 512Mi
+    max:
+      cpu: "4"
+      memory: 8Gi
+    min:
+      cpu: 100m
+      memory: 128Mi

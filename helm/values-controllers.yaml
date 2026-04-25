@@ -1,0 +1,40 @@
+OperationsCenter:
+  Enabled: false
+
+# Installs only the RBAC/ServiceAccount resources needed for OC to provision
+# managed controllers into this namespace. No OC pod is deployed here.
+# One Helm install of this file per controller namespace.
+Master:
+  Enabled: true
+  OperationsCenterNamespace: ci-oc
+  # Required: allows controllers in this namespace to validate M2M auth tokens
+  # issued by the CasC Bundle Service running in ci-oc.
+  tokenReviewEnabled: true
+
+  Ingress:
+    Class: alb
+    Annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: "443"
+      alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:835090871306:certificate/8d0bab7f-cd88-45de-911f-1574b1f3db60"
+      alb.ingress.kubernetes.io/tags: "Project=cbci-lab,ManagedBy=helm"
+      alb.ingress.kubernetes.io/group.name: cbci-oc
+      alb.ingress.kubernetes.io/success-codes: "200,302"
+      alb.ingress.kubernetes.io/target-group-attributes: "stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=86400,stickiness.type=lb_cookie"
+    tls:
+      Enable: false
+
+# Satisfies CBCI's security check (suppresses admin warning about agents in OC namespace).
+# ci-controllers-builds is auto-created but controllers override the actual agent
+# namespace per-controller via NamespaceFilter.defaultNamespace in items.yaml javaOptions.
+Agents:
+  SeparateNamespace:
+    Enabled: true
+    Create: true
+
+Persistence:
+  StorageClass: efs-ap
+  AccessMode: ReadWriteOnce
+  Size: 20Gi

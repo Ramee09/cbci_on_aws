@@ -1,0 +1,64 @@
+name: Sync Controller Agent Namespaces
+
+# Triggers whenever a controller is added to or removed from items.yaml.
+# Creates ci-agents-<name> namespace with RBAC, ResourceQuota, and LimitRange
+# for each managedController entry. Idempotent — safe to re-run.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "casc/oc-bundle/items.yaml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  sync-namespaces:
+    name: Sync agent namespaces
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Update kubeconfig for cbci-lab cluster
+        run: aws eks update-kubeconfig --name cbci-lab --region us-east-1
+
+      - name: Install PyYAML
+        run: pip install pyyaml --quiet
+
+      - name: Sync agent namespaces from items.yaml
+        run: bash scripts/sync-agent-namespaces.sh
+
+      - name: Verify namespaces exist
+        run: |
+          python3 - <<'EOF'
+          import yaml, subprocess, sys
+          with open("casc/oc-bundle/items.yaml") as f:
+              doc = yaml.safe_load(f)
+          failed = []
+          for item in doc.get("items", []):
+              if item.get("kind") == "managedController":
+                  ns = f"ci-agents-{item['name']}"
+                  result = subprocess.run(
+                      ["kubectl", "get", "namespace", ns, "--no-headers"],
+                      capture_output=True, text=True
+                  )
+                  if result.returncode != 0:
+                      failed.append(ns)
+                  else:
+                      print(f"  OK: {ns}")
+          if failed:
+              print(f"MISSING namespaces: {failed}", file=sys.stderr)
+              sys.exit(1)
+          EOF
