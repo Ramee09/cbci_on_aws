@@ -1,5 +1,6 @@
 OperationsCenter:
   Platform: standard
+  Protocol: https
 
   # SCM Retriever fetches the bundle from GitHub on startup (init container) and
   # polls every 1 minute. When a new bundle version is detected, OC
@@ -151,9 +152,11 @@ SsoRelay:
   controller:
     nodeSelector:
       role: controller
-    # Trust X-Forwarded-Proto: https from ALB so the relay computes its ACS URL
-    # as https:// not http:// when generating SAML AuthnRequests.
-    javaOpts: "-Dquarkus.http.proxy.proxy-address-forwarding=true"
+    # Trust X-Forwarded-Proto/Host from ALB so the relay computes its ACS URL
+    # as https:// when generating SAML AuthnRequests.
+    # proxy-address-forwarding=true is the primary switch; enable-forwarded-host
+    # and allow-x-forwarded are belt-and-suspenders for Quarkus 3.x native.
+    javaOpts: "-Dquarkus.http.proxy.proxy-address-forwarding=true -Dquarkus.http.proxy.enable-forwarded-host=true -Dquarkus.http.proxy.allow-x-forwarded=true"
     resources:
       requests:
         cpu: "100m"
