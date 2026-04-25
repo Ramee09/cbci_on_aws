@@ -151,6 +151,9 @@ SsoRelay:
   controller:
     nodeSelector:
       role: controller
+    # Trust X-Forwarded-Proto: https from ALB so the relay computes its ACS URL
+    # as https:// not http:// when generating SAML AuthnRequests.
+    javaOpts: "-Dquarkus.http.proxy.proxy-address-forwarding=true"
     resources:
       requests:
         cpu: "100m"
