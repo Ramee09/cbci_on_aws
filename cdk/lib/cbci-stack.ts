@@ -233,7 +233,7 @@ export class CbciStack extends cdk.Stack {
           },
         },
 
-        Agents: { SeparateNamespace: { Enabled: false } },
+        Agents: { SeparateNamespace: { Enabled: true, Create: true } },
 
         Persistence: {
           StorageClass: 'efs-ap',

@@ -18,7 +18,12 @@ OperationsCenter:
 
   # Networking opts required for SAML SSO to construct correct ACS/root URLs.
   # core.casc.config.bundle is NOT set — the SCM Retriever manages that path.
-  JavaOpts: "-Dcom.cloudbees.networking.protocol=https -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com -Dcom.cloudbees.networking.useSubdomain=false"
+  # DirectoryBrowserSupport.CSP: restrict CSP for artifact/workspace browsing (CB docs recommend enabling).
+  JavaOpts: >-
+    -Dcom.cloudbees.networking.protocol=https
+    -Dcom.cloudbees.networking.hostname=cjoc.myhomettbros.com
+    -Dcom.cloudbees.networking.useSubdomain=false
+    -Dhudson.model.DirectoryBrowserSupport.CSP="sandbox allow-same-origin allow-scripts; default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';"
 
   ContainerEnv:
     - name: JENKINS_ADMIN_PASSWORD
@@ -127,7 +132,8 @@ Master:
 
 Agents:
   SeparateNamespace:
-    Enabled: false
+    Enabled: true
+    Create: true
 
 # EFS-backed home directory for OC
 Persistence:
