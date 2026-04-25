@@ -146,6 +146,18 @@ Master:
     tls:
       Enable: false
 
+SsoRelay:
+  enabled: true
+  controller:
+    nodeSelector:
+      role: controller
+    resources:
+      requests:
+        cpu: "100m"
+        memory: 500Mi
+      limits:
+        memory: 500Mi
+
 Agents:
   SeparateNamespace:
     Enabled: true
