@@ -13,15 +13,8 @@ unclassified:
     skipNewVersions: false
     rejectWarnings: false
 
-  # Layer 4: enforce a 2-hour wall-clock timeout on all pipelines.
-  # overrideAllowed: false means users cannot bypass this via options { timeout(...) }
-  # with a longer value. This prevents runaway/zombie jobs from holding agents forever.
-  pipelinePolicies:
-    policies:
-    - name: "global-timeout"
-      enabled: true
-      rules:
-      - kind: timeout
-        minutes: 120
-        overrideAllowed: false
+  # pipelinePolicies config intentionally omitted here.
+  # cloudbees-pipeline-policies must be installed (via plugins.yaml) before JCasC
+  # can reference it — otherwise Jenkins throws ConfigurationAsCodeBootFailure on boot.
+  # Re-add this block after controllers are stable and the plugin is installed.
 
