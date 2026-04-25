@@ -151,7 +151,12 @@ Master:
 
 SsoRelay:
   enabled: true
+  ingress:
+    annotations:
+      alb.ingress.kubernetes.io/healthcheck-path: /q/health/ready
+      alb.ingress.kubernetes.io/success-codes: "200"
   controller:
+    replicas: 2
     nodeSelector:
       role: controller
     # Trust X-Forwarded-Proto/Host from ALB so the relay computes its ACS URL

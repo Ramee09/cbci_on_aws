@@ -88,11 +88,17 @@ jenkins:
   globalNodeProperties: []
 
 unclassified:
-  # cascAutoControllerProvisioning and bundleUpdateTiming intentionally omitted.
-  # On first boot with a fresh PVC, CloudBees plugin JCasC configurators are not yet
-  # registered when JCasC.init runs, causing ConfigurationAsCodeBootFailure.
-  # Both keys will be re-added once OC has completed its first full startup and
-  # installed all plugins from the update center.
+  cascAutoControllerProvisioning:
+    provisionControllerOnCreation: true
+    fireAndForget: true
+    initialDelay: 15
+    timeout: 600
+  bundleUpdateTiming:
+    automaticReload: true
+    automaticRestart: true
+    reloadAlwaysOnRestart: true
+    skipNewVersions: false
+    rejectWarnings: false
   bundleStorageService:
     activated: true
     pollingPeriod: 120
