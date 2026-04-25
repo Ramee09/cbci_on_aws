@@ -1,9 +1,0 @@
-id: "devflow"
-version: "8"
-apiVersion: 2
-parent: "base-bundle"
-description: "DevFlow managed controller — inherits from base-bundle"
-jcasc:
-  - "jenkins.yaml"
-items:
-  - "items.yaml"

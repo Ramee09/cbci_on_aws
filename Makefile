@@ -61,7 +61,7 @@ status:
 	@echo ""
 	@echo "=== Controllers ===" && \
 	  kubectl exec -n cloudbees cjoc-0 -- sh -c \
-	    "grep -h 'localEndpoint' /var/jenkins_home/jobs/devflow/config.xml /var/jenkins_home/jobs/test1/config.xml 2>/dev/null || echo 'controllers not yet provisioned'"
+	    "grep -h 'localEndpoint' /var/jenkins_home/jobs/controller1/config.xml /var/jenkins_home/jobs/controller-1/config.xml 2>/dev/null || echo 'controllers not yet provisioned'"
 
 destroy:
 	@echo "=== DESTRUCTIVE: terraform destroy — ENV=$(ENV) ==="

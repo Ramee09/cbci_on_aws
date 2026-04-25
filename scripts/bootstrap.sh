@@ -67,15 +67,12 @@ echo ""
 echo "=== 5. CloudBees CI — Operations Center ==="
 helm repo add cloudbees https://public-charts.artifacts.cloudbees.com/repository/public 2>/dev/null || true
 
-# RBAC for GitHub Actions
-kubectl apply -f k8s/rbac-github-actions.yaml
-
 # OC startup sequence:
 #   1. SCM Retriever init container — fetches casc/oc-bundle/ from GitHub and
 #      directs OC to load from that path (Retriever owns the bundle location)
 #   2. OC starts, loads bundle (plugins, jenkins.yaml, items.yaml)
 #   3. bundleStorageService polls casc/controller-bundles/ from GitHub every 120s
-#   4. items.yaml provisions devflow + test1 with configurationAsCode bundle assignment
+#   4. items.yaml provisions controller1 + controller-1 with configurationAsCode bundle assignment
 #   5. casc-client on each controller pulls its assigned bundle from OC via HTTPS
 
 helm upgrade --install cbci cloudbees/cloudbees-core \
@@ -102,9 +99,9 @@ echo "=========================================="
 echo " Bootstrap complete"
 echo "=========================================="
 echo ""
-echo "  OC:      https://${OC_HOSTNAME}/cjoc/"
-echo "  devflow: https://${OC_HOSTNAME}/devflow/"
-echo "  test1:   https://${OC_HOSTNAME}/test1/"
+echo "  OC:          https://${OC_HOSTNAME}/cjoc/"
+echo "  controller1: https://${OC_HOSTNAME}/controller1/"
+echo "  controller-1: https://${OC_HOSTNAME}/controller-1/"
 echo ""
 echo "  Controllers are provisioned automatically by OC from casc/oc-bundle/items.yaml"
 echo "  (SCM Retriever fetches from GitHub on startup, polls every 3 minutes)."

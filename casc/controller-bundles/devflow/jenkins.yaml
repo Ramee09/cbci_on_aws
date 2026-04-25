@@ -1,7 +1,0 @@
-jenkins:
-  systemMessage: "DevFlow Controller — managed by CloudBees CI CasC"
-
-unclassified:
-  location:
-    url: "https://cjoc.myhomettbros.com/devflow/"
-    adminAddress: ""
