@@ -1,5 +1,14 @@
 jenkins:
+  numExecutors: 0
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
+
+unclassified:
+  bundleUpdateTiming:
+    automaticReload: true
+    reloadAlwaysOnRestart: true
+    automaticRestart: true
+    skipNewVersions: false
+    rejectWarnings: false
 

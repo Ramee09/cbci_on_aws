@@ -1,11 +1,9 @@
 id: "controller-1"
-version: "4"
+version: "5"
 apiVersion: 2
 availabilityPattern: ".*"
 parent: "controller-bundles/base-bundle"
 description: "Controller-1 managed controller — inherits base-bundle; adds its own folders and credentials"
-automaticReload: true
-reloadAlwaysOnRestart: true
 jcasc:
   - "jenkins.yaml"
 items:

@@ -1,5 +1,5 @@
 id: "base-bundle"
-version: "8"
+version: "9"
 apiVersion: 2
 description: "Base bundle — inherited by all managed controllers; provides shared plugins and auth strategy"
 plugins:
