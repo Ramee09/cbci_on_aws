@@ -2,9 +2,10 @@ OperationsCenter:
   Platform: standard
   Protocol: https
 
-  # SCM Retriever fetches the bundle from GitHub on startup (init container) and
-  # polls every 1 minute. When a new bundle version is detected, OC
-  # reloads automatically via bundleUpdateTiming in jenkins.yaml.
+  # SCM Retriever fetches the OC bundle from GitHub on startup (init container) and
+  # polls every 1 minute. ocBundleAutomaticVersion replaces the version field in
+  # bundle.yaml with the SCM commit hash — no manual version bumping needed.
+  # Any push to casc/oc-bundle/ is detected automatically on the next poll cycle.
   # Webhook: https://cjoc.myhomettbros.com/cjoc/casc-retriever/retriever-github-webhook/
   # Configure that URL in GitHub repo Settings → Webhooks for instant apply on push.
   CasC:
@@ -16,6 +17,7 @@ OperationsCenter:
       scmBundlePath: "casc/oc-bundle"
       scmPollingInterval: "PT1M"
       githubWebhooksEnabled: "false"
+      ocBundleAutomaticVersion: true
 
   # Protocol: https above makes the Helm template generate all com.cloudbees.networking.*
   # JVM properties correctly (protocol, hostname, port=443, useSubdomain).
