@@ -154,22 +154,7 @@ svg a:hover .hov{opacity:1}
 .exec-card li{font-size:0.81rem;color:#8b949e;padding:3px 0;padding-left:12px;position:relative}
 .exec-card li::before{content:'›';position:absolute;left:0;color:#58a6ff}
 .exec-card li strong{color:#c9d1d9}
-.phases-section{padding:32px 48px 36px;border-bottom:2px solid #21262d}
-.phases-section h2{font-size:1.1rem;font-weight:800;color:#e6edf3;margin-bottom:18px;
-  display:flex;align-items:center;gap:10px}
-.phases-section h2::before{content:'';width:3px;height:1.1rem;background:#1f6feb;border-radius:2px;display:inline-block}
-.ptable{width:100%;border-collapse:collapse;font-size:0.81rem}
-.ptable th{background:#161b22;color:#6e7681;padding:9px 13px;text-align:left;
-  font-size:0.68rem;text-transform:uppercase;letter-spacing:.8px;font-weight:700;
-  border-bottom:1px solid #21262d}
-.ptable td{padding:9px 13px;border-bottom:1px solid #161b22;color:#c9d1d9;vertical-align:middle}
-.ptable tr:last-child td{border-bottom:none}
-.ptable td:first-child{font-weight:700;color:#8b949e;font-size:0.72rem}
-.ptable td:nth-child(2){font-weight:600;color:#e6edf3}
-.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;letter-spacing:.5px}
-.badge.done{background:#0f2519;color:#3fb950;border:1px solid #238636}
-.badge.wip{background:#1a1000;color:#d97706;border:1px solid #d97706}
-.badge.planned{background:#0d1f3c;color:#58a6ff;border:1px solid #1f6feb}
+
 
 /* ADR + Code Refs + Ops Notes */
 .adr{background:#12091f;border:1px solid #3b2060;border-radius:8px;padding:14px 16px;margin:18px 0}
@@ -230,7 +215,6 @@ svg a:hover .hov{opacity:1}
   <div class="sidebar-group">Document</div>
   <ul>
     <li><a href="#exec-summary">Executive Summary</a></li>
-    <li><a href="#phases">Implementation Phases</a></li>
   </ul>
   <div class="sidebar-group">Architecture</div>
   <ul>
@@ -303,28 +287,6 @@ svg a:hover .hov{opacity:1}
   </div>
 </section>
 
-<!-- ══════════ IMPLEMENTATION PHASES ══════════ -->
-<section class="phases-section" id="phases">
-  <h2>Implementation Phases</h2>
-  <table class="ptable">
-    <thead><tr><th>#</th><th>Phase</th><th>Scope</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td>01</td><td>AWS Networking</td><td>VPC 10.0.0.0/16 · 3 AZs · public/private subnets · single NAT Gateway · Route 53 hosted zone</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>02</td><td>EKS Cluster</td><td>Managed Node Group (system) · aws-auth ConfigMap · AWS LB Controller · ExternalDNS · EFS CSI driver</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>03</td><td>Karpenter Node Pools</td><td>3 NodePools: system (MNG) · controllers (on-demand) · agents (spot + OD fallback, taint)</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>04</td><td>Storage (EFS)</td><td>EFS filesystem · KMS encryption · Elastic throughput · StorageClass efs-ap · subPathPattern Access Points</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>05</td><td>CBCI Installation</td><td>Helm chart cloudbees/cloudbees-core · OC StatefulSet · SSO Relay · ALB ingress · ACM TLS</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>06</td><td>GitOps / CasC Delivery</td><td>casc-retriever (OC bundle, 1min) · git-sync sidecar (controller bundles, 60s) · bundleStorageService · ocBundleAutomaticVersion</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>07</td><td>HA Managed Controllers</td><td>controller-1 + controller-2 · 2 replicas each · EFS RWX · PodDisruptionBudget · pod anti-affinity · Hazelcast gossip NetworkPolicy</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>08</td><td>Identity &amp; SSO</td><td>Entra ID Enterprise App · SAML 2.0 · SSO Relay · group OID → Jenkins role mapping · forceAuthn · ALB sticky sessions</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>09</td><td>Secrets Management</td><td>AWS Secrets Manager · bootstrap.sh pull → K8s Secret · casc-retriever creds · JENKINS_ADMIN_PASSWORD injection</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>10</td><td>GHA OIDC Keyless Auth</td><td>GitHub OIDC provider · IAM role cbci-github-actions · aws-auth mapping · controller-namespace-sync workflow</td><td><span class="badge done">DONE</span></td></tr>
-      <tr><td>11</td><td>RBAC (Group Mapping)</td><td>Map Entra group OID a928ae2a → cbci-admins Jenkins role via OC CasC jenkins.yaml</td><td><span class="badge planned">PLANNED</span></td></tr>
-      <tr><td>12</td><td>Backup &amp; Restore</td><td>AWS Backup plan for EFS · Velero for K8s resources · backup schedules · restore runbook</td><td><span class="badge wip">IN PROGRESS</span></td></tr>
-      <tr><td>13</td><td>Observability</td><td>kube-prometheus-stack · Fluent Bit → CloudWatch · Grafana dashboards · alerting</td><td><span class="badge planned">PLANNED</span></td></tr>
-    </tbody>
-  </table>
-</section>
 
 <!-- ──────────────────────────────────────
      HLD — INTERACTIVE SVG DIAGRAM
