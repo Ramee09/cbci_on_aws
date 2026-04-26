@@ -6,7 +6,7 @@
 #
 # What this script does NOT do (OC handles it via CasC):
 #   - Controller provisioning  → casc/oc-bundle/items.yaml loaded by SCM Retriever
-#   - Controller CasC config   → casc/controller-bundles/ mounted via initContainer
+#   - Controller CasC config   → casc/controller-bundles/ mounted via git-sync sidecar
 #   - Plugin installation      → casc/oc-bundle/plugins.yaml
 #   - OC JCasC config          → casc/oc-bundle/jenkins.yaml
 #
@@ -30,6 +30,7 @@ CLUSTER="${CLUSTER:-cbci-lab}"
 REGION="${REGION:-us-east-1}"
 OC_HOSTNAME="${OC_HOSTNAME:-cjoc.myhomettbros.com}"
 CBCI_CHART_VERSION="${CBCI_CHART_VERSION:-3.36486.0+0e91c42e72db}"
+CBCI_NAMESPACE="${CBCI_NAMESPACE:-ci-controllers}"
 
 echo "=========================================="
 echo " CBCI on AWS — Bootstrap (ENV=${ENV})"
@@ -44,49 +45,87 @@ echo "=== 2. Namespaces ==="
 kubectl apply -f k8s/namespaces.yaml
 
 echo ""
-echo "=== 3. StorageClass (EFS) ==="
+echo "=== 3. Agent namespaces ==="
+# Agent namespaces must exist before controllers can schedule build pods.
+# CBCI sets up the RBAC inside these namespaces automatically on first controller boot.
+kubectl create namespace ci-agents-citest-1 --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace ci-agents-citest2  --dry-run=client -o yaml | kubectl apply -f -
+echo "  Agent namespaces ready."
+
+echo ""
+echo "=== 4. StorageClass (EFS) ==="
 kubectl apply -f k8s/storageclass-efs.yaml
 
 echo ""
-echo "=== 4. Jenkins admin secret ==="
-# Pull the admin password directly from Secrets Manager and create the K8s secret.
-# No ESO controller needed — AWS CLI has access via AWS_PROFILE=cbci-lab.
+echo "=== 5. Secrets from AWS Secrets Manager ==="
+# Pull credentials from Secrets Manager — nothing is hardcoded in git or this script.
 JENKINS_PASSWORD=$(aws secretsmanager get-secret-value \
   --secret-id cbci-lab/jenkins-admin-password \
   --query SecretString --output text \
   --region "${REGION}" | jq -r .password)
 
+# Jenkins admin secret — used by the OC container to set the initial admin account.
 kubectl create secret generic jenkins-admin-secret \
   --from-literal=password="${JENKINS_PASSWORD}" \
-  --namespace cloudbees \
+  --namespace "${CBCI_NAMESPACE}" \
   --dry-run=client -o yaml | kubectl apply -f -
-
 echo "  jenkins-admin-secret created."
 
+# casc-retriever credentials — allows the retriever sidecar to authenticate to
+# the OC's internal /casc-internal/check-bundle-update endpoint so it can
+# trigger hot-reloads after detecting a new commit (without an OC restart).
+# Same password as the Jenkins admin account.
+kubectl create secret generic casc-retriever-cbci-creds \
+  --from-literal=username=admin \
+  --from-literal=password="${JENKINS_PASSWORD}" \
+  --namespace "${CBCI_NAMESPACE}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+echo "  casc-retriever-cbci-creds created."
+
 echo ""
-echo "=== 5. CloudBees CI — Operations Center ==="
+echo "=== 6. CloudBees CI — Operations Center ==="
 helm repo add cloudbees https://public-charts.artifacts.cloudbees.com/repository/public 2>/dev/null || true
 
-# OC startup sequence:
-#   1. SCM Retriever init container — fetches casc/oc-bundle/ from GitHub and
-#      directs OC to load from that path (Retriever owns the bundle location)
-#   2. OC starts, loads bundle (plugins, jenkins.yaml, items.yaml)
-#   3. bundleStorageService polls casc/controller-bundles/ from GitHub every 120s
-#   4. items.yaml provisions controller1 + controller-1 with configurationAsCode bundle assignment
-#   5. casc-client on each controller pulls its assigned bundle from OC via HTTPS
-
 helm upgrade --install cbci cloudbees/cloudbees-core \
-  --namespace cloudbees \
+  --namespace "${CBCI_NAMESPACE}" \
   --version "${CBCI_CHART_VERSION}" \
   --values helm/values-oc.yaml \
   --wait --timeout 10m
 
-# OC will now: fetch the bundle from GitHub (SCM Retriever init container),
-# load plugins.yaml + jenkins.yaml + items.yaml, and provision controllers.
-# Monitor: kubectl logs -n cloudbees cjoc-0 -f
+echo ""
+echo "=== 7. Patch casc-retriever with Jenkins credentials ==="
+# The Helm chart has no native values for retriever → Jenkins authentication.
+# We inject the credentials via a strategic merge patch so the retriever can
+# call /casc-internal/check-bundle-update and trigger hot-reloads on every push.
+# NOTE: This patch must be re-applied after every helm upgrade (helm resets the
+# StatefulSet template to what the chart generates, removing custom env vars).
+kubectl patch statefulset cjoc \
+  --namespace "${CBCI_NAMESPACE}" \
+  --type strategic \
+  --patch "$(cat <<'PATCH'
+spec:
+  template:
+    spec:
+      containers:
+      - name: casc-retriever
+        env:
+        - name: casc_retriever_cbci_username
+          valueFrom:
+            secretKeyRef:
+              name: casc-retriever-cbci-creds
+              key: username
+        - name: casc_retriever_cbci_password
+          valueFrom:
+            secretKeyRef:
+              name: casc-retriever-cbci-creds
+              key: password
+PATCH
+)"
+echo "  casc-retriever patched with Jenkins credentials."
+echo "  OC pod will restart to pick up the new env vars."
 
 echo ""
-echo "=== 6. Velero (backup) ==="
+echo "=== 8. Velero (backup) ==="
 helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts 2>/dev/null || true
 helm upgrade --install velero vmware-tanzu/velero \
   --namespace velero \
@@ -99,13 +138,13 @@ echo "=========================================="
 echo " Bootstrap complete"
 echo "=========================================="
 echo ""
-echo "  OC:          https://${OC_HOSTNAME}/cjoc/"
-echo "  controller1: https://${OC_HOSTNAME}/controller1/"
-echo "  controller-1: https://${OC_HOSTNAME}/controller-1/"
+echo "  OC:      https://${OC_HOSTNAME}/cjoc/"
+echo "  CITEST-1: https://${OC_HOSTNAME}/citest-1/"
+echo "  CITEST2:  https://${OC_HOSTNAME}/citest2/"
 echo ""
 echo "  Controllers are provisioned automatically by OC from casc/oc-bundle/items.yaml"
-echo "  (SCM Retriever fetches from GitHub on startup, polls every 3 minutes)."
+echo "  (ocBundleAutomaticVersion: commit hash replaces version — no manual bumping needed)."
 echo ""
-echo "  Admin credentials: kubectl get secret jenkins-admin-secret -n cloudbees -o jsonpath='{.data.password}' | base64 -d"
+echo "  Admin password: aws secretsmanager get-secret-value --secret-id cbci-lab/jenkins-admin-password --query SecretString --output text | jq -r .password"
 echo ""
-echo "NOTE: Add cbci-lab/jenkins-admin-password to Secrets Manager before running bootstrap."
+echo "NOTE: License must be activated via OC UI on a fresh PVC before controllers provision."
