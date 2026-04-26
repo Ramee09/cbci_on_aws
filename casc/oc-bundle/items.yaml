@@ -30,6 +30,19 @@ items:
         replication:
           config:
             replicas: 2
+        yaml: |
+          spec:
+            template:
+              spec:
+                affinity:
+                  podAntiAffinity:
+                    preferredDuringSchedulingIgnoredDuringExecution:
+                      - weight: 100
+                        podAffinityTerm:
+                          labelSelector:
+                            matchLabels:
+                              com.cloudbees.cje.tenant: citest-1
+                          topologyKey: kubernetes.io/hostname
     properties:
       - configurationAsCode:
           bundle: "controller-bundles/citest-1"
@@ -56,6 +69,19 @@ items:
         replication:
           config:
             replicas: 2
+        yaml: |
+          spec:
+            template:
+              spec:
+                affinity:
+                  podAntiAffinity:
+                    preferredDuringSchedulingIgnoredDuringExecution:
+                      - weight: 100
+                        podAffinityTerm:
+                          labelSelector:
+                            matchLabels:
+                              com.cloudbees.cje.tenant: citest2
+                          topologyKey: kubernetes.io/hostname
     properties:
       - configurationAsCode:
           bundle: "controller-bundles/citest2"
