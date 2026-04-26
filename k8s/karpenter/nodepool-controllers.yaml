@@ -23,7 +23,7 @@ spec:
           operator: In
           values: ["amd64"]
   limits:
-    cpu: "16"
+    cpu: "32"
     memory: 64Gi
   disruption:
     # WhenEmpty prevents Karpenter from consolidating nodes that still host
