@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HLS — CloudBees CI on AWS</title>
+<style>
+  :root {
+    --blue:    #3b82f6;
+    --green:   #22c55e;
+    --purple:  #a855f7;
+    --orange:  #f97316;
+    --red:     #ef4444;
+    --slate:   #64748b;
+    --navy:    #0f3460;
+    --dark:    #1a1a2e;
+    --bg:      #f0f4f8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: #1a1a2e;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0f3460 100%);
+    color: white;
+    padding: 52px 60px 42px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent, transparent 40px,
+      rgba(255,255,255,0.015) 40px, rgba(255,255,255,0.015) 80px
+    );
+  }
+  .header h1 {
+    font-size: 2.6rem; font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(90deg, #fff, #a8c0ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    position: relative; z-index: 1;
+  }
+  .header p { font-size: 1rem; color: #a8b2d8; margin-top: 10px; position: relative; z-index: 1; }
+  .header .meta { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 22px; position: relative; z-index: 1; }
+  .header .meta span { font-size: 0.82rem; color: #7f8db0; }
+  .header .meta strong { color: #e0e6ff; }
+
+  /* ── CONTAINER ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 40px 30px; }
+
+  /* ── SECTION ── */
+  .section {
+    background: white; border-radius: 12px;
+    padding: 36px 40px; margin-bottom: 32px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    animation: fadeUp 0.5s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .section:nth-child(2)  { animation-delay: 0.05s; }
+  .section:nth-child(3)  { animation-delay: 0.10s; }
+  .section:nth-child(4)  { animation-delay: 0.15s; }
+  .section:nth-child(5)  { animation-delay: 0.20s; }
+  .section:nth-child(6)  { animation-delay: 0.25s; }
+  .section:nth-child(7)  { animation-delay: 0.30s; }
+  .section:nth-child(8)  { animation-delay: 0.35s; }
+  .section:nth-child(9)  { animation-delay: 0.40s; }
+
+  .section h2 {
+    font-size: 1.35rem; font-weight: 700; color: var(--navy);
+    border-bottom: 3px solid #e63946; padding-bottom: 12px; margin-bottom: 24px;
+  }
+  .section h3 { font-size: 1rem; font-weight: 700; color: #16213e; margin: 22px 0 10px; }
+  .section p  { color: #444; margin-bottom: 12px; font-size: 0.93rem; }
+
+  /* ── BADGES ── */
+  .badge { display: inline-block; padding: 3px 11px; border-radius: 12px; font-size: 0.74rem; font-weight: 700; }
+  .badge-blue   { background: #dbeafe; color: #1e40af; }
+  .badge-green  { background: #dcfce7; color: #166534; }
+  .badge-orange { background: #ffedd5; color: #9a3412; }
+  .badge-purple { background: #f3e8ff; color: #6b21a8; }
+  .badge-red    { background: #fee2e2; color: #991b1b; }
+
+  /* ── TABLES ── */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.89rem; }
+  th { background: var(--dark); color: white; padding: 11px 16px; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.4px; }
+  td { padding: 10px 16px; border-bottom: 1px solid #e2e8f0; color: #374151; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:hover td { background: #eff6ff; transition: background 0.2s; }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight {
+    background: #eff6ff; border-left: 4px solid var(--blue);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 16px 0;
+    font-size: 0.9rem; color: #1e40af;
+  }
+  .highlight strong { display: block; margin-bottom: 4px; }
+
+  /* ── LAYER STACK (overview) ── */
+  .layer-stack { display: flex; flex-direction: column; gap: 0; margin: 24px 0; }
+  .arch-layer {
+    border: 2px solid #e2e8f0; border-radius: 10px;
+    padding: 18px 22px; margin: 5px 0; position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+  .arch-layer:hover { transform: translateX(6px); box-shadow: -4px 4px 18px rgba(0,0,0,0.1); }
+  .arch-layer.blue   { border-color: var(--blue);   background: #eff6ff; }
+  .arch-layer.green  { border-color: var(--green);  background: #f0fdf4; }
+  .arch-layer.purple { border-color: var(--purple); background: #faf5ff; }
+  .arch-layer.orange { border-color: var(--orange); background: #fff7ed; }
+  .arch-layer.red    { border-color: var(--red);    background: #fef2f2; }
+  .arch-layer.slate  { border-color: var(--slate);  background: #f8fafc; }
+  .arch-layer h4     { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+  .arch-layer.blue   h4 { color: #1d4ed8; }
+  .arch-layer.green  h4 { color: #15803d; }
+  .arch-layer.purple h4 { color: #7e22ce; }
+  .arch-layer.orange h4 { color: #c2410c; }
+  .arch-layer.red    h4 { color: #b91c1c; }
+  .arch-layer.slate  h4 { color: #475569; }
+  .arch-boxes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .arch-box {
+    background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 8px 14px; font-size: 0.83rem; font-weight: 600; color: #334155;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .arch-box:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+  .stack-arrow { text-align: center; font-size: 1.3rem; color: #94a3b8; line-height: 1; margin: 2px 0; }
+
+  /* ══════════════════════════════════════════════════════
+     END-TO-END FLOW DIAGRAM
+  ══════════════════════════════════════════════════════ */
+  .e2e-diagram {
+    width: 100%;
+    overflow-x: auto;
+    padding: 8px 0;
+  }
+
+  .e2e-canvas {
+    min-width: 960px;
+    position: relative;
+    padding: 20px 0 30px;
+  }
+
+  /* Swimlane rows */
+  .swim { display: flex; align-items: center; min-height: 72px; margin-bottom: 8px; }
+  .swim-label {
+    width: 140px; min-width: 140px;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: #fff; padding: 10px 14px;
+    border-radius: 8px 0 0 8px; display: flex; align-items: center;
+    justify-content: center; text-align: center; line-height: 1.3;
+  }
+  .swim-label.blue   { background: #1d4ed8; }
+  .swim-label.green  { background: #15803d; }
+  .swim-label.purple { background: #7e22ce; }
+  .swim-label.orange { background: #c2410c; }
+  .swim-label.red    { background: #b91c1c; }
+  .swim-label.slate  { background: #475569; }
+
+  .swim-content {
+    flex: 1; background: rgba(255,255,255,0.6);
+    border: 1px solid #e2e8f0; border-left: none;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 16px; display: flex; align-items: center;
+    flex-wrap: wrap; gap: 6px;
+  }
+
+  /* Nodes in the E2E diagram */
+  .node {
+    border: 2px solid; border-radius: 8px;
+    padding: 8px 14px; font-size: 0.8rem; font-weight: 600;
+    background: white; white-space: nowrap;
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: default;
+    position: relative;
+  }
+  .node:hover { transform: scale(1.06); box-shadow: 0 6px 18px rgba(0,0,0,0.15); z-index: 5; }
+  .node.blue   { border-color: var(--blue);   color: #1d4ed8; }
+  .node.green  { border-color: var(--green);  color: #15803d; }
+  .node.purple { border-color: var(--purple); color: #7e22ce; }
+  .node.orange { border-color: var(--orange); color: #c2410c; }
+  .node.red    { border-color: var(--red);    color: #b91c1c; }
+  .node.slate  { border-color: var(--slate);  color: #475569; }
+
+  /* Animated arrows between nodes */
+  .arrow {
+    display: flex; align-items: center; color: #94a3b8;
+    font-size: 1rem; flex-shrink: 0; padding: 0 4px;
+    position: relative;
+  }
+  .arrow span { font-size: 0.65rem; color: #9ca3af; white-space: nowrap; position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); }
+
+  /* Pulsing animated arrow */
+  .arrow svg { animation: pulse-arrow 1.8s ease-in-out infinite; }
+  @keyframes pulse-arrow {
+    0%, 100% { opacity: 0.4; transform: translateX(0); }
+    50%       { opacity: 1;   transform: translateX(3px); }
+  }
+
+  .arrow-vert { text-align: center; color: #94a3b8; font-size: 1.1rem; padding: 4px 0; animation: pulse-down 2s ease-in-out infinite; }
+  @keyframes pulse-down {
+    0%, 100% { opacity: 0.4; transform: translateY(0); }
+    50%       { opacity: 1;   transform: translateY(3px); }
+  }
+
+  /* Section divider within E2E */
+  .e2e-divider {
+    text-align: center; font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: #9ca3af; margin: 6px 0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .e2e-divider::before, .e2e-divider::after {
+    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+  }
+
+  /* ── STEP FLOWS ── */
+  .flow-steps { counter-reset: step; }
+  .flow-step {
+    display: flex; gap: 16px; margin-bottom: 18px; align-items: flex-start;
+    padding: 14px 18px; border-radius: 8px; background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .flow-step:hover { background: #eff6ff; box-shadow: 0 2px 10px rgba(59,130,246,0.1); }
+  .flow-num {
+    counter-increment: step;
+    background: var(--navy); color: white;
+    border-radius: 50%; min-width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .flow-content strong { display: block; font-size: 0.93rem; color: #1a1a2e; margin-bottom: 3px; }
+  .flow-content span   { font-size: 0.86rem; color: #6b7280; }
+  .flow-content code   { background: #e0e7ff; color: #3730a3; padding: 1px 6px; border-radius: 4px; font-size: 0.82rem; font-family: monospace; }
+
+  /* ── TWO-COL GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 16px 0; }
+  .card {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 18px 20px;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-2px); }
+  .card h4 { font-size: 0.88rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .card p, .card li { font-size: 0.86rem; color: #555; }
+  .card ul { padding-left: 16px; }
+  .card li { margin-bottom: 4px; }
+
+  /* ── COST TABLE ── */
+  .cost-total { font-weight: 700; background: #fff7ed !important; }
+  .cost-total td { color: #c2410c !important; }
+
+  /* ── TAG ROW ── */
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+
+  /* ── COLOR LEGEND ── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; font-weight: 600; color: #374151;
+  }
+  .legend-dot {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .header { padding: 32px 20px; }
+    .header h1 { font-size: 1.7rem; }
+    .container { padding: 20px 16px; }
+    .section { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<div class="header">
+  <h1>High-Level Solution — CloudBees CI on AWS</h1>
+  <p>Personal learning lab: CBCI Modern on Amazon EKS, mirroring Mastercard production on Azure AKS</p>
+  <div class="meta">
+    <span><strong>Owner:</strong> Naga Ramesh Swarna</span>
+    <span><strong>Region:</strong> us-east-1</span>
+    <span><strong>Cluster:</strong> cbci-lab (EKS 1.31)</span>
+    <span><strong>Domain:</strong> myhomettbros.com</span>
+    <span><strong>Document:</strong> HLS v2.0</span>
+    <span><strong>Date:</strong> April 2026</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════ 1. EXECUTIVE SUMMARY ══════════════════ -->
+<div class="section">
+  <h2>1. Executive Summary</h2>
+  <p>This project builds a fully production-grade <strong>CloudBees CI (CBCI) Modern</strong> platform on <strong>Amazon EKS</strong>. It is a personal learning lab designed to mirror the architecture running at Mastercard on Azure AKS — porting every component to AWS to deeply understand both cloud platforms and Kubernetes operations.</p>
+  <p>All Jenkins/CBCI configuration is managed via <strong>Configuration as Code (CasC) bundles</strong> — no manual UI interaction. Infrastructure is Terraform. Workloads are Helm-deployed. Bundle changes flow from a Git push and are picked up automatically via the SCM Retriever polling GitHub every 3 minutes.</p>
+  <div class="highlight">
+    <strong>Key Learning Outcome</strong>
+    The owner can explain every component — from VPC CIDR design to CBCI bundle inheritance, from Karpenter NodePool tainting to SAML SSO RBAC — well enough to field it in a senior platform engineering interview.
+  </div>
+</div>
+
+<!-- ══════════════════ 2. SUCCESS CRITERIA ══════════════════ -->
+<div class="section">
+  <h2>2. Success Criteria</h2>
+  <table>
+    <tr><th>#</th><th>Criterion</th><th>Status</th></tr>
+    <tr><td>1</td><td>CBCI Operations Center on EKS with ALB ingress and EFS-backed storage</td><td><span class="badge badge-green">Implemented</span></td></tr>
+    <tr><td>2</td><td>At least one managed controller in active-active HA (2 replicas)</td><td><span class="badge badge-green">Implemented</span></td></tr>
+    <tr><td>3</td><td>All CBCI configuration managed via CasC bundles — no UI clicking</td><td><span class="badge badge-green">Implemented</span></td></tr>
+    <tr><td>4</td><td>Ephemeral pod-based build agents on a separate tainted Karpenter node pool</td><td><span class="badge badge-green">Implemented</span></td></tr>
+    <tr><td>5</td><td>Entra ID SAML 2.0 SSO with group-based RBAC</td><td><span class="badge badge-blue">Planned</span></td></tr>
+    <tr><td>6</td><td>Owner can explain every piece in a production interview</td><td><span class="badge badge-blue">In Progress</span></td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════ 3. COLOR LEGEND ══════════════════ -->
+<div class="section">
+  <h2>3. Color Coding Legend</h2>
+  <p>Each color maps to a logical layer used consistently throughout this document and in all diagrams:</p>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> <strong>Blue</strong> — User / Identity / External (Developer, Entra ID, GitHub, Secrets Manager)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> <strong>Green</strong> — Ingress / DNS / TLS (ALB, Route 53, ACM, ExternalDNS)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> <strong>Purple</strong> — CBCI Platform (Operations Center, Controllers, casc-server, casc-client)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> <strong>Orange</strong> — Compute (EKS node groups, Karpenter NodePools, pods)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> <strong>Red</strong> — Storage &amp; Persistence (EFS, S3, AWS Backup, Velero)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--slate)"></div> <strong>Grey</strong> — Network Foundation (VPC, Subnets, NAT Gateway)</div>
+  </div>
+</div>
+
+<!-- ══════════════════ 4. ARCHITECTURE LAYER OVERVIEW ══════════════════ -->
+<div class="section">
+  <h2>4. Architecture Layer Overview</h2>
+  <p>The platform is built in layers. Hover over each layer to highlight it. Deployment order is bottom-to-top; teardown is top-to-bottom.</p>
+
+  <div class="layer-stack">
+    <div class="arch-layer blue">
+      <h4>&#128100; User &amp; Identity Layer</h4>
+      <div class="arch-boxes">
+        <div class="arch-box">Developer Browser</div>
+        <div class="arch-box">Microsoft Entra ID (SAML 2.0)</div>
+        <div class="arch-box">GitHub — CasC repo (Ramee09/cbci_on_aws)</div>
+        <div class="arch-box">AWS Secrets Manager — jenkins-admin-password</div>
+      </div>
+    </div>
+    <div class="stack-arrow">&#8595;</div>
+    <div class="arch-layer green">
+      <h4>&#127760; Ingress &amp; DNS Layer</h4>
+      <div class="arch-boxes">
+        <div class="arch-box">Route 53 — myhomettbros.com (Hosted Zone)</div>
+        <div class="arch-box">ACM Certificate — *.myhomettbros.com (TLS)</div>
+        <div class="arch-box">Application Load Balancer (ALB)</div>
+        <div class="arch-box">AWS Load Balancer Controller</div>
+        <div class="arch-box">ExternalDNS — auto-creates Route 53 records</div>
+      </div>
+    </div>
+    <div class="stack-arrow">&#8595;</div>
+    <div class="arch-layer purple">
+      <h4>&#9881; CBCI Platform Layer — Kubernetes (cloudbees namespace)</h4>
+      <div class="arch-boxes">
+        <div class="arch-box">Operations Center — StatefulSet (cjoc-0)</div>
+        <div class="arch-box">SCM Retriever sidecar — polls GitHub every 3 min</div>
+        <div class="arch-box">casc-server — stores &amp; serves controller bundles</div>
+        <div class="arch-box">devflow controller — StatefulSet ×2 replicas</div>
+        <div class="arch-box">test1 controller — StatefulSet ×2 replicas</div>
+        <div class="arch-box">casc-client — polls OC, hot-reloads bundle</div>
+      </div>
+    </div>
+    <div class="stack-arrow">&#8595;</div>
+    <div class="arch-layer orange">
+      <h4>&#128246; Compute Layer — Amazon EKS (cbci-lab, us-east-1)</h4>
+      <div class="arch-boxes">
+        <div class="arch-box">System Node Group — 2× t3.large (managed, always-on)</div>
+        <div class="arch-box">Controllers NodePool — on-demand t3.large/xlarge (Karpenter)</div>
+        <div class="arch-box">Agents NodePool — spot + on-demand, tainted NoSchedule (Karpenter)</div>
+      </div>
+    </div>
+    <div class="stack-arrow">&#8595;</div>
+    <div class="arch-layer red">
+      <h4>&#128190; Storage &amp; Persistence Layer</h4>
+      <div class="arch-boxes">
+        <div class="arch-box">Amazon EFS — JENKINS_HOME (RWX, KMS-encrypted, Elastic throughput)</div>
+        <div class="arch-box">EFS Access Point /oc — Operations Center</div>
+        <div class="arch-box">EFS Access Point /devflow — DevFlow controller</div>
+        <div class="arch-box">EFS Access Point /test1 — Test1 controller</div>
+        <div class="arch-box">S3 — Velero backups &amp; Terraform state</div>
+        <div class="arch-box">AWS Backup — EFS daily snapshots, 14-day retention</div>
+      </div>
+    </div>
+    <div class="stack-arrow">&#8595;</div>
+    <div class="arch-layer slate">
+      <h4>&#127755; Network Foundation</h4>
+      <div class="arch-boxes">
+        <div class="arch-box">VPC 10.0.0.0/16 — 3 AZs (us-east-1a/b/c)</div>
+        <div class="arch-box">Public Subnets — ALB only</div>
+        <div class="arch-box">Private Subnets — EKS nodes &amp; EFS</div>
+        <div class="arch-box">Single NAT Gateway — us-east-1a</div>
+        <div class="arch-box">VPC Endpoints — EC2, ECR, S3, STS</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ 5. END-TO-END FLOW DIAGRAM ══════════════════ -->
+<div class="section">
+  <h2>5. End-to-End Flow Diagram</h2>
+  <p>This diagram traces three critical flows through the full system — a developer UI request, a CasC bundle update, and an agent-based build job. Arrows animate to show directionality.</p>
+
+  <div class="e2e-diagram">
+    <div class="e2e-canvas">
+
+      <div class="e2e-divider">&#x1F4E6; Flow A — Developer Browses to Jenkins UI (HTTPS + SAML SSO)</div>
+
+      <div class="swim">
+        <div class="swim-label blue">User /<br>Browser</div>
+        <div class="swim-content">
+          <div class="node blue">Developer<br>Browser</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#3b82f6" stroke-width="2" fill="none"/></svg>
+            <span>HTTPS GET</span>
+          </div>
+          <div class="node green">Route 53<br>cjoc.myhomettbros.com</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#22c55e" stroke-width="2" fill="none"/></svg>
+            <span>A record → ALB</span>
+          </div>
+          <div class="node green">ACM TLS<br>ALB</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#22c55e" stroke-width="2" fill="none"/></svg>
+            <span>forward :8080</span>
+          </div>
+          <div class="node purple">OC Pod<br>cjoc-0</div>
+        </div>
+      </div>
+
+      <div class="swim">
+        <div class="swim-label blue">Entra ID<br>(SAML)</div>
+        <div class="swim-content">
+          <div class="node purple">OC — SAML<br>redirect</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>AuthnRequest</span>
+          </div>
+          <div class="node blue">Entra ID<br>Login page</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#3b82f6" stroke-width="2" fill="none"/></svg>
+            <span>SAML Assertion</span>
+          </div>
+          <div class="node purple">OC — group<br>→ role mapping</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>session</span>
+          </div>
+          <div class="node blue">Dashboard<br>rendered</div>
+        </div>
+      </div>
+
+      <div class="e2e-divider" style="margin-top:20px">&#x1F504; Flow B — CasC Bundle Update (Git Push → Bundles Hot-Reloaded)</div>
+
+      <div class="swim">
+        <div class="swim-label blue">Developer<br>Git Push</div>
+        <div class="swim-content">
+          <div class="node blue">Engineer<br>git push main</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#3b82f6" stroke-width="2" fill="none"/></svg>
+            <span>webhook</span>
+          </div>
+          <div class="node blue">GitHub<br>Actions CI</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#3b82f6" stroke-width="2" fill="none"/></svg>
+            <span>YAML validate</span>
+          </div>
+          <div class="node blue">✓ Commit<br>on main</div>
+        </div>
+      </div>
+
+      <div class="swim">
+        <div class="swim-label purple">OC — SCM<br>Retriever</div>
+        <div class="swim-content">
+          <div class="node blue">GitHub<br>casc/oc-bundle</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>poll every 3 min</span>
+          </div>
+          <div class="node purple">SCM Retriever<br>sidecar</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>write to</span>
+          </div>
+          <div class="node red">EFS<br>/var/jenkins_home/core-casc-bundle</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>JCasC reload</span>
+          </div>
+          <div class="node purple">OC applies<br>jenkins.yaml</div>
+        </div>
+      </div>
+
+      <div class="swim">
+        <div class="swim-label purple">casc-server<br>→ controllers</div>
+        <div class="swim-content">
+          <div class="node blue">GitHub<br>casc/controller-bundles</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>poll every 120s</span>
+          </div>
+          <div class="node purple">bundleStorage<br>Service (OC)</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>write</span>
+          </div>
+          <div class="node red">EFS<br>jcasc-bundles-store/</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#ef4444" stroke-width="2" fill="none"/></svg>
+            <span>casc-client pull</span>
+          </div>
+          <div class="node purple">devflow pods<br>×2 hot-reload</div>
+        </div>
+      </div>
+
+      <div class="e2e-divider" style="margin-top:20px">&#x1F528; Flow C — Build Job Triggers Ephemeral Agent (Karpenter Scale-Up)</div>
+
+      <div class="swim">
+        <div class="swim-label purple">Controller<br>→ Agent</div>
+        <div class="swim-content">
+          <div class="node blue">Developer<br>triggers build</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>queue</span>
+          </div>
+          <div class="node purple">devflow<br>controller pod</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>K8s pod spec</span>
+          </div>
+          <div class="node orange">Kubernetes<br>API Server</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#f97316" stroke-width="2" fill="none"/></svg>
+            <span>NodeClaim</span>
+          </div>
+          <div class="node orange">Karpenter<br>Agents NodePool</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#f97316" stroke-width="2" fill="none"/></svg>
+            <span>EC2 spot launch</span>
+          </div>
+          <div class="node orange">Agent pod<br>(spot EC2 node)</div>
+        </div>
+      </div>
+
+      <div class="swim">
+        <div class="swim-label orange">Build Run<br>&amp; Cleanup</div>
+        <div class="swim-content">
+          <div class="node orange">Agent pod<br>executes steps</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#f97316" stroke-width="2" fill="none"/></svg>
+            <span>results</span>
+          </div>
+          <div class="node purple">devflow<br>records build</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>persist</span>
+          </div>
+          <div class="node red">EFS<br>/devflow JENKINS_HOME</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#ef4444" stroke-width="2" fill="none"/></svg>
+            <span>build done</span>
+          </div>
+          <div class="node orange">Agent pod<br>deleted ✓</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#f97316" stroke-width="2" fill="none"/></svg>
+            <span>idle → scale-in</span>
+          </div>
+          <div class="node orange">EC2 node<br>terminated ✓</div>
+        </div>
+      </div>
+
+      <div class="e2e-divider" style="margin-top:20px">&#x1F510; Flow D — Secrets Bootstrap (One-Time on Cluster Startup)</div>
+
+      <div class="swim">
+        <div class="swim-label blue">Secret<br>Delivery</div>
+        <div class="swim-content">
+          <div class="node blue">AWS Secrets<br>Manager</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#3b82f6" stroke-width="2" fill="none"/></svg>
+            <span>aws secretsmanager<br>get-secret-value</span>
+          </div>
+          <div class="node orange">bootstrap.sh<br>(local Mac)</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#f97316" stroke-width="2" fill="none"/></svg>
+            <span>kubectl create secret</span>
+          </div>
+          <div class="node purple">K8s Secret<br>jenkins-admin-secret</div>
+          <div class="arrow">
+            <svg width="36" height="16" viewBox="0 0 36 16"><path d="M0 8 H28 M22 2 L34 8 L22 14" stroke="#a855f7" stroke-width="2" fill="none"/></svg>
+            <span>env var</span>
+          </div>
+          <div class="node purple">OC pod<br>reads password</div>
+        </div>
+      </div>
+
+    </div><!-- /.e2e-canvas -->
+  </div><!-- /.e2e-diagram -->
+</div>
+
+<!-- ══════════════════ 6. CASC BUNDLE HIERARCHY ══════════════════ -->
+<div class="section">
+  <h2>6. CasC Bundle Hierarchy &amp; Git-to-Controller Flow</h2>
+
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>Engineer edits CasC YAML and pushes to GitHub (<code>main</code>)</strong>
+        <span>Files under <code>casc/oc-bundle/</code> (OC config) or <code>casc/controller-bundles/</code> (controller config).</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>GitHub Actions runs YAML validation (<code>casc-deploy.yaml</code> workflow)</strong>
+        <span>Validates every <code>*.yaml</code> under <code>casc/</code> with <code>yaml.safe_load</code>. No AWS access needed — repo is public.</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>SCM Retriever sidecar (OC pod) polls GitHub every 3 minutes</strong>
+        <span>Detects new commit hash for <code>casc/oc-bundle/</code> and downloads new files into <code>/var/jenkins_home/core-casc-bundle/</code>.</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>OC JCasC hot-reloads from updated bundle files</strong>
+        <span><code>bundleUpdateTiming.automaticReload=true</code> — JCasC config applied without restart. Plugin changes trigger safe-restart.</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong><code>bundleStorageService</code> polls GitHub every 120 seconds for controller bundles</strong>
+        <span>Configured in OC <code>jenkins.yaml</code>. Reads <code>casc/controller-bundles/</code> tree, writes updated bundles to <code>$JENKINS_HOME/jcasc-bundles-store/</code> on EFS.</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>casc-client on each controller polls OC, detects version change, applies bundle</strong>
+        <span>Controller inherits from <code>base-bundle</code> (shared Kubernetes cloud config, auth) and overrides only its own <code>systemMessage</code> and <code>location.url</code>.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Bundle Inheritance Tree</h3>
+  <div class="e2e-diagram">
+    <div style="min-width: 600px; padding: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div style="background:#f3e8ff; border:2px solid var(--purple); border-radius:10px; padding:12px 28px; font-weight:700; color:#7e22ce; font-size:0.9rem;">
+        base-bundle — inherited by all controllers<br>
+        <span style="font-size:0.78rem; font-weight:400; color:#6b7280;">authorizationStrategy + Kubernetes cloud config + pod templates</span>
+      </div>
+      <div style="display:flex; gap:60px; align-items:flex-start;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+          <div style="color:#94a3b8; font-size:1.1rem;">↓</div>
+          <div style="background:#eff6ff; border:2px solid var(--blue); border-radius:10px; padding:12px 20px; font-weight:700; color:#1d4ed8; font-size:0.85rem; text-align:center;">
+            devflow bundle<br>
+            <span style="font-size:0.75rem; font-weight:400; color:#6b7280;">systemMessage + location.url override<br>2 replicas active-active HA</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+          <div style="color:#94a3b8; font-size:1.1rem;">↓</div>
+          <div style="background:#f0fdf4; border:2px solid var(--green); border-radius:10px; padding:12px 20px; font-weight:700; color:#15803d; font-size:0.85rem; text-align:center;">
+            test1 bundle<br>
+            <span style="font-size:0.75rem; font-weight:400; color:#6b7280;">systemMessage + location.url override<br>2 replicas active-active HA</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ 7. NODE ARCHITECTURE ══════════════════ -->
+<div class="section">
+  <h2>7. Node Architecture — Karpenter NodePools</h2>
+  <p>Three compute tiers run in the same EKS cluster. Karpenter manages scale-up/scale-in for controller and agent tiers; the system tier is a fixed managed node group.</p>
+  <table>
+    <tr><th>NodePool</th><th>Instance Type</th><th>Pricing</th><th>Taint / Label</th><th>Pods Scheduled</th></tr>
+    <tr>
+      <td><strong>System</strong> (managed)</td>
+      <td>t3.large ×2</td>
+      <td>On-demand, always-on</td>
+      <td><code>role=system</code></td>
+      <td>CoreDNS, kube-proxy, LBC, ExternalDNS, Karpenter, Velero</td>
+    </tr>
+    <tr>
+      <td><strong>Controllers</strong> (Karpenter)</td>
+      <td>t3.large / t3.xlarge</td>
+      <td>On-demand (no eviction risk)</td>
+      <td><code>role=controller</code></td>
+      <td>OC StatefulSet, devflow StatefulSet ×2, test1 StatefulSet ×2</td>
+    </tr>
+    <tr>
+      <td><strong>Agents</strong> (Karpenter)</td>
+      <td>Mixed: t3.medium, t3.large, t3.xlarge</td>
+      <td>Spot-first, on-demand fallback</td>
+      <td><code>role=agent</code> + <strong>NoSchedule taint</strong></td>
+      <td>Ephemeral Jenkins agent pods only (tolerate the taint)</td>
+    </tr>
+  </table>
+  <div class="highlight">
+    <strong>Why the taint on agents?</strong>
+    The NoSchedule taint on agent nodes ensures a rogue build job that exhausts memory/CPU cannot evict controller pods. Controllers and agents live on physically separate EC2 instances.
+  </div>
+</div>
+
+<!-- ══════════════════ 8. COMPONENT INVENTORY ══════════════════ -->
+<div class="section">
+  <h2>8. Component Inventory</h2>
+  <table>
+    <tr><th>Component</th><th>Layer</th><th>Technology</th><th>Role</th></tr>
+    <tr><td>Operations Center</td><td><span class="badge badge-purple">CBCI</span></td><td>CBCI Modern, StatefulSet</td><td>Controller lifecycle, license, SSO, bundle distribution</td></tr>
+    <tr><td>devflow Controller</td><td><span class="badge badge-purple">CBCI</span></td><td>CBCI Modern, StatefulSet ×2</td><td>Active-active HA Jenkins master for DevFlow team</td></tr>
+    <tr><td>test1 Controller</td><td><span class="badge badge-purple">CBCI</span></td><td>CBCI Modern, StatefulSet ×2</td><td>Active-active HA Jenkins master for test team</td></tr>
+    <tr><td>casc-server</td><td><span class="badge badge-purple">CBCI</span></td><td>CloudBees CasC plugin</td><td>Stores &amp; serves controller bundles from jcasc-bundles-store/</td></tr>
+    <tr><td>casc-client</td><td><span class="badge badge-purple">CBCI</span></td><td>CloudBees CasC plugin</td><td>Polls OC for assigned bundle, hot-reloads controller config</td></tr>
+    <tr><td>SCM Retriever</td><td><span class="badge badge-purple">CBCI</span></td><td>cloudbees-casc-scm-retriever plugin</td><td>Sidecar that polls GitHub and writes OC bundle to EFS</td></tr>
+    <tr><td>ALB Ingress</td><td><span class="badge badge-green">Ingress</span></td><td>AWS Load Balancer Controller</td><td>Terminates TLS, routes traffic to OC and controllers</td></tr>
+    <tr><td>ExternalDNS</td><td><span class="badge badge-green">Ingress</span></td><td>ExternalDNS controller</td><td>Auto-creates Route 53 A records from Ingress annotations</td></tr>
+    <tr><td>EFS CSI Driver</td><td><span class="badge badge-red">Storage</span></td><td>Amazon EFS CSI Driver</td><td>Provisions RWX PersistentVolumes backed by EFS Access Points</td></tr>
+    <tr><td>Velero</td><td><span class="badge badge-red">Storage</span></td><td>Velero + S3 backend</td><td>K8s resource backup; complements AWS Backup EFS snapshots</td></tr>
+    <tr><td>Karpenter</td><td><span class="badge badge-orange">Compute</span></td><td>Karpenter v1.0</td><td>Just-in-time node provisioning for controllers and agents</td></tr>
+    <tr><td>Terraform</td><td><span class="badge badge-blue">IaC</span></td><td>Terraform 1.14, 4 modules</td><td>VPC, EKS, EFS, platform resources (IAM, Secrets Manager, S3)</td></tr>
+    <tr><td>Helm</td><td><span class="badge badge-blue">IaC</span></td><td>Helm 4.1</td><td>Deploys CBCI, Velero, LBC, ExternalDNS, Karpenter</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════ 9. SSO FLOW ══════════════════ -->
+<div class="section">
+  <h2>9. Entra ID SAML SSO Flow</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h4>&#128272; Identity Provider (Entra ID)</h4>
+      <ul>
+        <li>Enterprise Application: <strong>CBCI-Lab</strong></li>
+        <li>Protocol: SAML 2.0</li>
+        <li>Entity ID: <code>https://cjoc.myhomettbros.com/securityRealm/saml2/metadata</code></li>
+        <li>ACS URL: <code>/securityRealm/saml2/acs</code></li>
+        <li>Groups attribute: <code>http://schemas.microsoft.com/ws/2008/06/identity/claims/groups</code></li>
+        <li>Groups: <code>cbci-admins</code>, <code>cbci-developers</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>&#128274; Service Provider (OC)</h4>
+      <ul>
+        <li>Plugin: <strong>Jenkins SAML Plugin</strong> (not Azure AD plugin)</li>
+        <li>Group-to-role mapping in OC CasC <code>jenkins.yaml</code></li>
+        <li><code>cbci-admins</code> → Admin role</li>
+        <li><code>cbci-developers</code> → Developer role</li>
+        <li>Active-active HA compatible (session via EFS-backed JENKINS_HOME)</li>
+        <li>Local admin retained as break-glass fallback</li>
+      </ul>
+    </div>
+  </div>
+  <div class="flow-steps" style="margin-top:16px;">
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>User visits <code>https://cjoc.myhomettbros.com</code></strong>
+        <span>OC detects unauthenticated session, generates SAML AuthnRequest.</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>Browser redirected to Entra ID login page</strong>
+        <span>User authenticates with their personal Entra tenant (MFA if configured).</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>Entra ID returns signed SAML Assertion to OC ACS endpoint</strong>
+        <span>Assertion includes group membership claims in the configured attribute.</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>OC maps groups → Jenkins roles, establishes session</strong>
+        <span>User is granted appropriate permissions. Session is EFS-backed, survives pod restarts.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ 10. SECRET MANAGEMENT ══════════════════ -->
+<div class="section">
+  <h2>10. Secret Management</h2>
+  <p>Simplified to a single secret. No External Secrets Operator. No static secrets in Git.</p>
+  <table>
+    <tr><th>Secret</th><th>Stored In</th><th>Delivered Via</th><th>Consumer</th></tr>
+    <tr>
+      <td><code>jenkins-admin-password</code></td>
+      <td>AWS Secrets Manager<br><code>cbci-lab/jenkins-admin-password</code></td>
+      <td><code>bootstrap.sh</code> pulls with AWS CLI,<br>creates K8s secret <code>jenkins-admin-secret</code></td>
+      <td>OC pod — admin login</td>
+    </tr>
+  </table>
+  <div class="highlight">
+    <strong>Why no ESO?</strong>
+    ESO adds a controller, CRDs, IRSA role, and ClusterSecretStore — significant overhead for one secret. The <code>bootstrap.sh</code> one-liner is equivalent operationally and requires no running controller. The trade-off is no auto-rotation push; rotation requires re-running bootstrap, which is acceptable for a lab.
+  </div>
+</div>
+
+<!-- ══════════════════ 11. KEY DESIGN DECISIONS ══════════════════ -->
+<div class="section">
+  <h2>11. Key Design Decisions</h2>
+  <table>
+    <tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr>
+    <tr><td>Region</td><td>us-east-1</td><td>Cheapest, most service coverage in AWS</td></tr>
+    <tr><td>NAT Gateway</td><td>Single (1 AZ)</td><td>~$32/mo vs $96/mo for 3-AZ — lab, not prod</td></tr>
+    <tr><td>Controller storage</td><td>Amazon EFS (RWX)</td><td>Active-active HA requires shared JENKINS_HOME across 2 pods</td></tr>
+    <tr><td>EFS layout</td><td>One filesystem, one Access Point per controller</td><td>Blast radius isolation — devflow crash doesn't affect test1</td></tr>
+    <tr><td>Ingress</td><td>ALB + AWS LBC</td><td>AWS-native, WAF-ready, free TLS via ACM</td></tr>
+    <tr><td>Node strategy</td><td>Managed system group + Karpenter controllers/agents</td><td>System stability + workload agility</td></tr>
+    <tr><td>Agent isolation</td><td>Separate NodePool with NoSchedule taint</td><td>Rogue build can't evict controller pods</td></tr>
+    <tr><td>SSO protocol</td><td>SAML 2.0 (Jenkins SAML plugin)</td><td>Active-active HA compatible; mirrors Mastercard production</td></tr>
+    <tr><td>Secret delivery</td><td>AWS CLI pull in bootstrap.sh</td><td>No ESO controller overhead for 1 secret</td></tr>
+    <tr><td>Observability</td><td>None (removed)</td><td>Not needed for learning goals; reduces cost and complexity</td></tr>
+    <tr><td>CasC bundle delivery</td><td>SCM Retriever → casc-server → casc-client</td><td>Production pattern — no ConfigMaps, no initContainers</td></tr>
+    <tr><td>Bundle inheritance</td><td>base-bundle parent with per-controller override</td><td>DRY — shared config in one place, controllers override only what differs</td></tr>
+    <tr><td>GitHub Actions</td><td>YAML validation only</td><td>casc-server auto-increments internal version on commit hash change; no stamping needed</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════ 12. TERRAFORM MODULE BREAKDOWN ══════════════════ -->
+<div class="section">
+  <h2>12. Terraform Module Breakdown</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h4>&#128187; 10-vpc</h4>
+      <ul>
+        <li>VPC 10.0.0.0/16, 3 AZs</li>
+        <li>3 public subnets (ALB) + 3 private (nodes/EFS)</li>
+        <li>Single NAT Gateway in us-east-1a</li>
+        <li>VPC Endpoints: EC2, ECR, S3, STS</li>
+        <li>Route tables: public → IGW, private → NAT</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>&#9881; 20-eks</h4>
+      <ul>
+        <li>EKS 1.31 control plane</li>
+        <li>Managed node group: 2× t3.large (system)</li>
+        <li>OIDC provider for IRSA</li>
+        <li>aws-auth ConfigMap for naga-admin</li>
+        <li>Add-ons: CoreDNS, kube-proxy, VPC CNI, EBS CSI</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>&#128190; 30-efs</h4>
+      <ul>
+        <li>EFS filesystem (KMS-encrypted, Elastic throughput)</li>
+        <li>Mount targets in all 3 private subnets</li>
+        <li>Access Point: /oc (uid 1000)</li>
+        <li>Access Point: /devflow (uid 1000)</li>
+        <li>Access Point: /test1 (uid 1000)</li>
+        <li>Security group: NFS 2049 from node SG</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>&#127981; 60-platform</h4>
+      <ul>
+        <li>S3 buckets: Velero backup, TF state</li>
+        <li>AWS Secrets Manager: jenkins-admin-password</li>
+        <li>IAM roles: LBC, ExternalDNS, Velero (IRSA)</li>
+        <li>Route 53 Hosted Zone: myhomettbros.com</li>
+        <li>ACM Certificate: *.myhomettbros.com (DNS-validated)</li>
+        <li>AWS Backup vault + plan (daily, 14-day retention)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ 13. DEPLOYMENT ORDER ══════════════════ -->
+<div class="section">
+  <h2>13. Deployment Order</h2>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>terraform apply — 10-vpc</strong>
+        <span>VPC, subnets, IGW, NAT Gateway, route tables, VPC endpoints</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>terraform apply — 20-eks</strong>
+        <span>EKS control plane, system node group, OIDC provider, add-ons</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>terraform apply — 30-efs</strong>
+        <span>EFS filesystem, mount targets, Access Points, security groups</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>terraform apply — 60-platform</strong>
+        <span>S3, Secrets Manager, IAM IRSA roles, Route 53, ACM, AWS Backup</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>scripts/bootstrap.sh</strong>
+        <span>kubeconfig, namespaces, EFS StorageClass, jenkins-admin-secret, Helm install CBCI OC, Helm install Velero</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>OC comes online — SCM Retriever polls GitHub</strong>
+        <span>OC bundle applied. bundleStorageService picks up controller bundles. casc-client on controllers applies assigned bundles.</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num"></div>
+      <div class="flow-content">
+        <strong>Entra ID SSO configuration (manual Entra admin UI)</strong>
+        <span>Create Enterprise App, configure SAML, create groups, assign users. OC SAML CasC config already deployed.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ 14. COST MODEL ══════════════════ -->
+<div class="section">
+  <h2>14. Cost Model (us-east-1, lab running)</h2>
+  <table>
+    <tr><th>Resource</th><th>Config</th><th>~Monthly Cost</th></tr>
+    <tr><td>EKS Control Plane</td><td>1 cluster</td><td>$73</td></tr>
+    <tr><td>System Nodes</td><td>2× t3.large on-demand</td><td>$120</td></tr>
+    <tr><td>Controller Nodes (Karpenter)</td><td>~3× t3.large on-demand (OC + 2 controllers)</td><td>$180</td></tr>
+    <tr><td>Agent Nodes (Karpenter)</td><td>Spot, only during builds</td><td>~$20</td></tr>
+    <tr><td>NAT Gateway</td><td>Single, us-east-1a</td><td>~$32</td></tr>
+    <tr><td>ALB</td><td>1 ALB</td><td>~$20</td></tr>
+    <tr><td>EFS</td><td>~10 GB (lab), Elastic throughput</td><td>~$5</td></tr>
+    <tr><td>S3</td><td>Velero + TF state (&lt;1 GB)</td><td>&lt;$1</td></tr>
+    <tr><td>AWS Backup</td><td>EFS snapshots, 14-day</td><td>~$5</td></tr>
+    <tr><td>Route 53</td><td>1 hosted zone</td><td>$0.50</td></tr>
+    <tr><td>ACM</td><td>1 certificate</td><td>$0</td></tr>
+    <tr><td>Secrets Manager</td><td>1 secret</td><td>&lt;$1</td></tr>
+    <tr class="cost-total"><td colspan="2"><strong>Total (lab fully running)</strong></td><td><strong>~$456/mo</strong></td></tr>
+    <tr><td colspan="2"><em>lab-stop.sh (nodes drained, EKS kept)</em></td><td><em>~$105/mo</em></td></tr>
+  </table>
+</div>
+
+</div><!-- /.container -->
+</body>
+</html>

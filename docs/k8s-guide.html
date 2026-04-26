@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kubernetes Daily Guide — CBCI on EKS</title>
+<style>
+  :root {
+    --blue:   #3b82f6;
+    --green:  #22c55e;
+    --purple: #a855f7;
+    --orange: #f97316;
+    --red:    #ef4444;
+    --teal:   #14b8a6;
+    --yellow: #eab308;
+    --dark:   #0f172a;
+    --navy:   #1e293b;
+    --bg:     #f1f5f9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: #1e293b; line-height: 1.6; }
+
+  /* NAV */
+  .topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: #0f172a; border-bottom: 2px solid #3b82f6;
+    display: flex; align-items: center; flex-wrap: wrap;
+    padding: 0 24px; gap: 0;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  }
+  .topnav-logo { font-size: 0.85rem; font-weight: 800; color: #93c5fd; padding: 12px 20px 12px 0; border-right: 1px solid #1e3a5f; white-space: nowrap; margin-right: 12px; }
+  .topnav a { color: #94a3b8; text-decoration: none; font-size: 0.75rem; font-weight: 600; padding: 14px 12px; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
+  .topnav a:hover { color: #93c5fd; border-bottom-color: #3b82f6; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #020817 0%, #0f172a 50%, #0c1a3a 100%);
+    color: white; padding: 52px 60px 40px; position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 500px 250px at 80% 50%, rgba(59,130,246,0.15) 0%, transparent 70%),
+      radial-gradient(ellipse 300px 200px at 10% 70%, rgba(20,184,166,0.1) 0%, transparent 70%);
+  }
+  .header-inner { position: relative; z-index: 1; }
+  .header h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; background: linear-gradient(100deg, #fff 30%, #93c5fd 70%, #5eead4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { font-size: 1rem; color: #94a3b8; margin-top: 10px; max-width: 640px; }
+  .header .meta { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 18px; }
+  .header .meta span { font-size: 0.8rem; color: #64748b; }
+  .header .meta strong { color: #93c5fd; }
+
+  /* CONTAINER */
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 32px 60px; }
+
+  /* SECTION */
+  .section { background: white; border-radius: 14px; padding: 32px 36px; margin: 28px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .section h2 { font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+  .section h3 { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 22px 0 12px; }
+
+  /* ── KUBERNETES ARCHITECTURE DIAGRAM ── */
+  .k8s-arch { display: flex; flex-direction: column; gap: 12px; }
+
+  .k8s-flow-arrow {
+    text-align: center; font-size: 1.4rem; color: #3b82f6; position: relative;
+  }
+  .k8s-flow-arrow span { font-size: 0.7rem; color: #64748b; display: block; font-weight: 600; }
+
+  .kubectl-box {
+    background: linear-gradient(135deg, #1e3a5f, #1e293b);
+    border: 2px solid #3b82f6; border-radius: 12px; padding: 16px 24px;
+    display: flex; align-items: center; gap: 16px; max-width: 420px; margin: 0 auto;
+  }
+  .kubectl-icon { font-size: 2rem; }
+  .kubectl-info h4 { color: #93c5fd; font-size: 0.95rem; font-weight: 800; }
+  .kubectl-info p { color: #64748b; font-size: 0.75rem; margin-top: 2px; }
+  .kubectl-info code { color: #5eead4; font-size: 0.72rem; background: #0f172a; padding: 2px 6px; border-radius: 4px; }
+
+  .cp-box {
+    border: 2px solid #3b82f6; border-radius: 14px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    padding: 18px 20px;
+  }
+  .cp-box .cp-label { font-size: 0.7rem; font-weight: 800; color: #1d4ed8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .cp-components { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .cp-comp {
+    background: white; border: 1.5px solid #bfdbfe; border-radius: 10px;
+    padding: 12px 10px; text-align: center;
+  }
+  .cp-comp .icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+  .cp-comp .name { font-size: 0.7rem; font-weight: 700; color: #1d4ed8; }
+  .cp-comp .desc { font-size: 0.62rem; color: #64748b; margin-top: 2px; }
+
+  .nodes-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .node-box {
+    border: 2px solid; border-radius: 12px; padding: 14px;
+  }
+  .node-box.sys { border-color: #22c55e; background: #f0fdf4; }
+  .node-box.ctrl { border-color: #a855f7; background: #faf5ff; }
+  .node-box.agent { border-color: #f97316; background: #fff7ed; }
+  .node-label { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .node-box.sys .node-label { color: #15803d; }
+  .node-box.ctrl .node-label { color: #7e22ce; }
+  .node-box.agent .node-label { color: #c2410c; }
+  .pod-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .pod {
+    border-radius: 6px; padding: 5px 8px; font-size: 0.62rem; font-weight: 600;
+    border: 1px solid; text-align: center; line-height: 1.3;
+  }
+  .pod.sys  { background: #dcfce7; border-color: #86efac; color: #15803d; }
+  .pod.ctrl { background: #ede9fe; border-color: #c4b5fd; color: #6d28d9; }
+  .pod.oc   { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+  .pod.agent{ background: #ffedd5; border-color: #fdba74; color: #c2410c; }
+  .pod.dt   { background: #f5f3ff; border-color: #c4b5fd; color: #5b21b6; }
+
+  /* ── CONNECT SECTION ── */
+  .connect-steps { display: flex; flex-direction: column; gap: 0; }
+  .connect-step {
+    display: flex; gap: 0; align-items: stretch;
+  }
+  .step-num-col { display: flex; flex-direction: column; align-items: center; width: 48px; flex-shrink: 0; }
+  .step-circle { width: 36px; height: 36px; border-radius: 50%; background: #3b82f6; color: white; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-line { width: 2px; background: #bfdbfe; flex: 1; margin: 4px 0; }
+  .connect-step:last-child .step-line { display: none; }
+  .step-body { padding: 0 0 24px 16px; flex: 1; }
+  .step-body h4 { font-size: 0.9rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+  .step-body p { font-size: 0.8rem; color: #64748b; margin-bottom: 8px; }
+
+  /* ── TERMINAL ── */
+  .terminal {
+    background: #0f172a; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25); margin: 8px 0;
+  }
+  .terminal-bar {
+    background: #1e293b; padding: 8px 14px; display: flex; align-items: center; gap: 6px;
+  }
+  .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .t-dot.red { background: #ef4444; }
+  .t-dot.yellow { background: #eab308; }
+  .t-dot.green { background: #22c55e; }
+  .terminal-bar span { font-size: 0.68rem; color: #64748b; margin-left: 8px; font-family: monospace; }
+  .terminal-body { padding: 14px 18px; font-family: 'Courier New', monospace; font-size: 0.78rem; line-height: 1.7; }
+  .t-prompt { color: #5eead4; }
+  .t-cmd { color: #f8fafc; }
+  .t-comment { color: #475569; font-style: italic; }
+  .t-out { color: #94a3b8; }
+  .t-hi { color: #86efac; }
+  .t-warn { color: #fde68a; }
+  .t-err { color: #fca5a5; }
+  .t-blue { color: #93c5fd; }
+  .t-purple { color: #c4b5fd; }
+  .t-orange { color: #fdba74; }
+
+  /* ── COMMAND CARDS ── */
+  .cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+  .cmd-card {
+    border-radius: 12px; border: 1.5px solid; overflow: hidden;
+  }
+  .cmd-card-header {
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .cmd-card-header .icon { font-size: 1.3rem; }
+  .cmd-card-header h4 { font-size: 0.85rem; font-weight: 800; }
+  .cmd-card-header .badge { margin-left: auto; font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .cmd-card-body { padding: 14px 16px; background: white; }
+  .cmd-row { margin-bottom: 14px; }
+  .cmd-row:last-child { margin-bottom: 0; }
+  .cmd-label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .cmd-line {
+    background: #0f172a; color: #5eead4; font-family: 'Courier New', monospace;
+    font-size: 0.75rem; padding: 8px 12px; border-radius: 7px;
+    display: flex; align-items: flex-start; gap: 6px; word-break: break-all;
+  }
+  .cmd-line .dollar { color: #475569; flex-shrink: 0; }
+  .cmd-note { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; }
+
+  /* card color variants */
+  .cmd-card.blue  { border-color: #93c5fd; }
+  .cmd-card.blue  .cmd-card-header { background: #eff6ff; color: #1d4ed8; }
+  .cmd-card.blue  .cmd-card-header .badge { background: #dbeafe; color: #1d4ed8; }
+  .cmd-card.purple{ border-color: #c4b5fd; }
+  .cmd-card.purple .cmd-card-header { background: #faf5ff; color: #7e22ce; }
+  .cmd-card.purple .cmd-card-header .badge { background: #ede9fe; color: #7e22ce; }
+  .cmd-card.green { border-color: #86efac; }
+  .cmd-card.green .cmd-card-header { background: #f0fdf4; color: #15803d; }
+  .cmd-card.green .cmd-card-header .badge { background: #dcfce7; color: #15803d; }
+  .cmd-card.orange{ border-color: #fdba74; }
+  .cmd-card.orange .cmd-card-header { background: #fff7ed; color: #c2410c; }
+  .cmd-card.orange .cmd-card-header .badge { background: #ffedd5; color: #c2410c; }
+  .cmd-card.teal  { border-color: #99f6e4; }
+  .cmd-card.teal  .cmd-card-header { background: #f0fdfa; color: #0f766e; }
+  .cmd-card.teal  .cmd-card-header .badge { background: #ccfbf1; color: #0f766e; }
+  .cmd-card.red   { border-color: #fca5a5; }
+  .cmd-card.red   .cmd-card-header { background: #fef2f2; color: #991b1b; }
+  .cmd-card.red   .cmd-card-header .badge { background: #fee2e2; color: #991b1b; }
+
+  /* ── VISUAL FLOW: what happens when kubectl runs ── */
+  .flow-row { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+  .flow-box {
+    border-radius: 10px; padding: 12px 16px; text-align: center;
+    font-size: 0.72rem; font-weight: 700; border: 2px solid; min-width: 100px;
+  }
+  .flow-arr { font-size: 1.4rem; color: #94a3b8; padding: 0 6px; flex-shrink: 0; }
+  .flow-arr-label { font-size: 0.6rem; color: #94a3b8; display: block; text-align: center; margin-top: -4px; }
+
+  /* ── CHEATSHEET TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { background: #f8fafc; font-weight: 700; color: #475569; text-align: left; padding: 10px 14px; border-bottom: 2px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; }
+  td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; color: #0f172a; font-family: 'Courier New', monospace; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 700; }
+  .tag.blue   { background: #dbeafe; color: #1d4ed8; }
+  .tag.green  { background: #dcfce7; color: #15803d; }
+  .tag.purple { background: #ede9fe; color: #7e22ce; }
+  .tag.orange { background: #ffedd5; color: #c2410c; }
+  .tag.red    { background: #fee2e2; color: #991b1b; }
+  .tag.teal   { background: #ccfbf1; color: #0f766e; }
+
+  .tip {
+    background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0;
+    padding: 12px 16px; font-size: 0.8rem; color: #15803d; margin: 16px 0;
+  }
+  .warn-box {
+    background: #fff7ed; border-left: 4px solid #f97316; border-radius: 0 8px 8px 0;
+    padding: 12px 16px; font-size: 0.8rem; color: #c2410c; margin: 16px 0;
+  }
+
+  @media (max-width: 768px) {
+    .cp-components { grid-template-columns: repeat(2,1fr); }
+    .nodes-row { grid-template-columns: 1fr; }
+    .cmd-grid { grid-template-columns: 1fr; }
+    .header { padding: 32px 24px; }
+    .section { padding: 22px 20px; }
+    .container { padding: 0 16px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <div class="topnav-logo">&#9096; K8s Guide — CBCI EKS</div>
+  <a href="#arch">Architecture</a>
+  <a href="#connect">Connect</a>
+  <a href="#pods">Pods</a>
+  <a href="#nodes">Nodes</a>
+  <a href="#storage">Storage</a>
+  <a href="#logs">Logs & Debug</a>
+  <a href="#casc">CasC & CBCI</a>
+  <a href="#cheatsheet">Cheatsheet</a>
+</nav>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <h1>Kubernetes Daily Guide</h1>
+    <p>How Kubernetes works, how to connect to the CBCI EKS cluster, and the commands you'll use every day — all in one place.</p>
+    <div class="meta">
+      <span><strong>Cluster:</strong> cbci-lab</span>
+      <span><strong>Region:</strong> us-east-1</span>
+      <span><strong>Namespace:</strong> cloudbees</span>
+      <span><strong>Version:</strong> Kubernetes 1.31</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ── 1. KUBERNETES ARCHITECTURE ── -->
+<div class="section" id="arch">
+  <h2>&#9783; How Kubernetes Works</h2>
+  <p style="font-size:0.85rem;color:#64748b;margin-bottom:20px;">Everything you do goes through the <strong>API Server</strong>. kubectl is just a client that talks to it. The control plane decides what runs where; nodes do the actual work.</p>
+
+  <div class="k8s-arch">
+
+    <!-- kubectl -->
+    <div class="kubectl-box">
+      <div class="kubectl-icon">&#128187;</div>
+      <div class="kubectl-info">
+        <h4>kubectl — Your Terminal</h4>
+        <p>The CLI that sends commands to the cluster</p>
+        <code>~/.kube/config</code> &nbsp;stores cluster credentials
+      </div>
+    </div>
+
+    <!-- arrow down -->
+    <div class="k8s-flow-arrow">&#8595;<span>HTTPS API calls (port 443)</span></div>
+
+    <!-- control plane -->
+    <div class="cp-box">
+      <div class="cp-label">&#9881; Control Plane — managed by AWS (EKS)</div>
+      <div class="cp-components">
+        <div class="cp-comp">
+          <span class="icon">&#127760;</span>
+          <div class="name">API Server</div>
+          <div class="desc">Front door — all requests go here</div>
+        </div>
+        <div class="cp-comp">
+          <span class="icon">&#128190;</span>
+          <div class="name">etcd</div>
+          <div class="desc">Key-value store — cluster state</div>
+        </div>
+        <div class="cp-comp">
+          <span class="icon">&#128203;</span>
+          <div class="name">Scheduler</div>
+          <div class="desc">Decides which node runs a pod</div>
+        </div>
+        <div class="cp-comp">
+          <span class="icon">&#128260;</span>
+          <div class="name">Controller Manager</div>
+          <div class="desc">Keeps desired state in sync</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- arrow down -->
+    <div class="k8s-flow-arrow">&#8595;<span>kubelet on each node watches for pod assignments</span></div>
+
+    <!-- worker nodes -->
+    <div class="nodes-row">
+
+      <!-- System Node -->
+      <div class="node-box sys">
+        <div class="node-label">&#9899; System Node Group — t3.large ×2</div>
+        <div style="font-size:0.65rem;color:#64748b;margin-bottom:6px;">Always-on · managed node group</div>
+        <div class="pod-grid">
+          <div class="pod sys">CoreDNS</div>
+          <div class="pod sys">kube-proxy</div>
+          <div class="pod sys">VPC CNI</div>
+          <div class="pod sys">Karpenter</div>
+          <div class="pod sys">LBC</div>
+          <div class="pod sys">ExternalDNS</div>
+          <div class="pod sys">EFS CSI</div>
+          <div class="pod dt">Dynatrace<br>OneAgent</div>
+        </div>
+      </div>
+
+      <!-- Controller Node -->
+      <div class="node-box ctrl">
+        <div class="node-label">&#128312; Controllers Node — t3.large (Karpenter)</div>
+        <div style="font-size:0.65rem;color:#64748b;margin-bottom:6px;">On-demand · always-on · min 2</div>
+        <div class="pod-grid">
+          <div class="pod oc">cjoc-0<br><small>OC</small></div>
+          <div class="pod ctrl">controller-1-0<br><small>Replica 1</small></div>
+          <div class="pod ctrl">controller-1-1<br><small>Replica 2</small></div>
+          <div class="pod ctrl">controller-2-0<br><small>Replica 1</small></div>
+          <div class="pod ctrl">controller-2-1<br><small>Replica 2</small></div>
+        </div>
+      </div>
+
+      <!-- Agent Node -->
+      <div class="node-box agent">
+        <div class="node-label">&#9889; Agent Node — t3.medium/large (Karpenter)</div>
+        <div style="font-size:0.65rem;color:#64748b;margin-bottom:6px;">Spot-first · scale to 0 when idle</div>
+        <div class="pod-grid">
+          <div class="pod agent">build-agent-xxx<br><small>ephemeral</small></div>
+          <div class="pod agent">build-agent-yyy<br><small>ephemeral</small></div>
+        </div>
+        <div style="font-size:0.65rem;color:#c2410c;margin-top:8px;">&#9650; Spins up on build trigger · terminates when job ends</div>
+      </div>
+    </div>
+
+    <!-- what kubectl does -->
+    <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-top:4px;">
+      <div style="font-size:0.72rem;font-weight:700;color:#475569;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">What happens when you run a kubectl command</div>
+      <div class="flow-row">
+        <div class="flow-box" style="background:#1e3a5f;color:#93c5fd;border-color:#3b82f6;">&#128187;<br>kubectl</div>
+        <div><div class="flow-arr">&#8594;</div><div class="flow-arr-label">HTTPS :443</div></div>
+        <div class="flow-box" style="background:#eff6ff;color:#1d4ed8;border-color:#3b82f6;">&#127760;<br>API Server</div>
+        <div><div class="flow-arr">&#8594;</div><div class="flow-arr-label">reads/writes</div></div>
+        <div class="flow-box" style="background:#eff6ff;color:#1d4ed8;border-color:#3b82f6;">&#128190;<br>etcd</div>
+        <div><div class="flow-arr">&#8594;</div><div class="flow-arr-label">notifies</div></div>
+        <div class="flow-box" style="background:#f0fdf4;color:#15803d;border-color:#22c55e;">&#128260;<br>kubelet</div>
+        <div><div class="flow-arr">&#8594;</div><div class="flow-arr-label">starts</div></div>
+        <div class="flow-box" style="background:#faf5ff;color:#7e22ce;border-color:#a855f7;">&#9632;<br>Pod</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── 2. CONNECT TO CLUSTER ── -->
+<div class="section" id="connect">
+  <h2>&#128272; Connecting to the Cluster</h2>
+
+  <div class="connect-steps">
+
+    <div class="connect-step">
+      <div class="step-num-col">
+        <div class="step-circle">1</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h4>Verify your AWS identity</h4>
+        <p>Confirm you're authenticated as <code>naga-admin</code> in the right account before touching the cluster.</p>
+        <div class="terminal">
+          <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>zsh — verify identity</span></div>
+          <div class="terminal-body">
+            <div><span class="t-prompt">❯ </span><span class="t-cmd">aws sts get-caller-identity --profile cbci-lab</span></div>
+            <div class="t-out">{</div>
+            <div class="t-out">&nbsp;&nbsp;<span class="t-hi">"UserId"</span>: "AIDA...",</div>
+            <div class="t-out">&nbsp;&nbsp;<span class="t-hi">"Account"</span>: "123456789012",</div>
+            <div class="t-out">&nbsp;&nbsp;<span class="t-hi">"Arn"</span>: "arn:aws:iam::123456789012:user/<span class="t-warn">naga-admin</span>"</div>
+            <div class="t-out">}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connect-step">
+      <div class="step-num-col">
+        <div class="step-circle">2</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h4>Update kubeconfig — add the cluster to kubectl</h4>
+        <p>This writes the EKS cluster credentials into <code>~/.kube/config</code> so kubectl can talk to it.</p>
+        <div class="terminal">
+          <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>zsh — kubeconfig</span></div>
+          <div class="terminal-body">
+            <div><span class="t-prompt">❯ </span><span class="t-cmd">aws eks update-kubeconfig \</span></div>
+            <div><span class="t-cmd">&nbsp;&nbsp;--name cbci-lab \</span></div>
+            <div><span class="t-cmd">&nbsp;&nbsp;--region us-east-1 \</span></div>
+            <div><span class="t-cmd">&nbsp;&nbsp;--profile cbci-lab</span></div>
+            <div class="t-hi">Added new context arn:aws:eks:us-east-1:...:cluster/cbci-lab to /Users/naga/.kube/config</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connect-step">
+      <div class="step-num-col">
+        <div class="step-circle">3</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h4>Verify connection to the cluster</h4>
+        <p>Check that kubectl can reach the API server and see the nodes.</p>
+        <div class="terminal">
+          <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>zsh — verify cluster</span></div>
+          <div class="terminal-body">
+            <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl cluster-info</span></div>
+            <div class="t-hi">Kubernetes control plane is running at https://XXXX.gr7.us-east-1.eks.amazonaws.com</div>
+            <br>
+            <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl get nodes</span></div>
+            <div class="t-out">NAME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;STATUS&nbsp;&nbsp;&nbsp;ROLES&nbsp;&nbsp;&nbsp;AGE&nbsp;&nbsp;&nbsp;VERSION</div>
+            <div class="t-hi">ip-10-0-1-45.ec2.internal&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;2d&nbsp;&nbsp;&nbsp;&nbsp;v1.31.0</div>
+            <div class="t-hi">ip-10-0-2-89.ec2.internal&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;2d&nbsp;&nbsp;&nbsp;&nbsp;v1.31.0</div>
+            <div class="t-hi">ip-10-0-3-12.ec2.internal&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;1d&nbsp;&nbsp;&nbsp;&nbsp;v1.31.0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connect-step">
+      <div class="step-num-col">
+        <div class="step-circle">4</div>
+      </div>
+      <div class="step-body">
+        <h4>Set the default namespace (optional but useful)</h4>
+        <p>So you don't have to type <code>-n cloudbees</code> on every command.</p>
+        <div class="terminal">
+          <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>zsh — set namespace</span></div>
+          <div class="terminal-body">
+            <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl config set-context --current --namespace=cloudbees</span></div>
+            <div class="t-hi">Context "arn:aws:eks:..." modified.</div>
+            <br>
+            <div><span class="t-comment"># To check current context and namespace:</span></div>
+            <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl config get-contexts</span></div>
+            <div class="t-out">CURRENT&nbsp;&nbsp;NAME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CLUSTER&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NAMESPACE</div>
+            <div class="t-hi">*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arn:aws:eks...&nbsp;&nbsp;cbci-lab&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cloudbees</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── 3. POD COMMANDS ── -->
+<div class="section" id="pods">
+  <h2>&#9632; Working with Pods</h2>
+
+  <div class="tip">Pods are the smallest unit in Kubernetes — a running container (or group of containers) on a node. The CBCI pods live in the <strong>cloudbees</strong> namespace.</div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card blue">
+      <div class="cmd-card-header"><span class="icon">&#128269;</span><h4>List Pods</h4><span class="badge">Read</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">All pods in cloudbees namespace</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pods -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Watch pods live (refreshes automatically)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pods -n cloudbees -w</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Show which node each pod is running on</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pods -n cloudbees -o wide</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">All pods across all namespaces</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pods -A</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card purple">
+      <div class="cmd-card-header"><span class="icon">&#128196;</span><h4>Describe a Pod</h4><span class="badge">Detail</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">Full details — events, mounts, conditions</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe pod cjoc-0 -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Describe a controller pod</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe pod controller-1-0 -n cloudbees</div>
+        </div>
+        <div class="cmd-note">&#9432; Describe shows <strong>Events</strong> at the bottom — the most useful section when troubleshooting a pod that won't start.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card green">
+      <div class="cmd-card-header"><span class="icon">&#128196;</span><h4>Pod Logs</h4><span class="badge">Logs</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">Live logs (tail)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs -f cjoc-0 -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Last 100 lines</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs cjoc-0 -n cloudbees --tail=100</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Specific container in a pod (e.g. casc-client)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs cjoc-0 -c casc-client -n cloudbees -f</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Previous (crashed) container logs</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs cjoc-0 -n cloudbees --previous</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card orange">
+      <div class="cmd-card-header"><span class="icon">&#128421;</span><h4>Shell into a Pod</h4><span class="badge">Exec</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">Open a bash shell inside the OC pod</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl exec -it cjoc-0 -n cloudbees -- bash</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Run a single command (no shell)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl exec cjoc-0 -n cloudbees -- ls /var/jenkins_home</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Shell into specific container in pod</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl exec -it cjoc-0 -c casc-client -n cloudbees -- sh</div>
+        </div>
+        <div class="cmd-note">&#9888; Exit with <code>exit</code> or Ctrl+D</div>
+      </div>
+    </div>
+
+  </div>
+
+  <h3>What a healthy pod list looks like</h3>
+  <div class="terminal">
+    <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>kubectl get pods -n cloudbees -o wide</span></div>
+    <div class="terminal-body">
+      <div class="t-out">NAME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;READY&nbsp;&nbsp;&nbsp;STATUS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RESTARTS&nbsp;&nbsp;&nbsp;AGE&nbsp;&nbsp;&nbsp;NODE</div>
+      <div><span class="t-blue">cjoc-0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-hi">2/2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Running&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2d</span><span class="t-out">&nbsp;&nbsp;&nbsp;ip-10-0-1-45.ec2.internal</span></div>
+      <div><span class="t-purple">controller-1-0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-hi">2/2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Running&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2d</span><span class="t-out">&nbsp;&nbsp;&nbsp;ip-10-0-2-89.ec2.internal</span></div>
+      <div><span class="t-purple">controller-1-1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-hi">2/2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Running&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2d</span><span class="t-out">&nbsp;&nbsp;&nbsp;ip-10-0-3-12.ec2.internal</span></div>
+      <div><span class="t-purple">controller-2-0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-hi">2/2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Running&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1d</span><span class="t-out">&nbsp;&nbsp;&nbsp;ip-10-0-2-89.ec2.internal</span></div>
+      <div><span class="t-purple">controller-2-1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-hi">2/2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Running&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1d</span><span class="t-out">&nbsp;&nbsp;&nbsp;ip-10-0-3-12.ec2.internal</span></div>
+      <br>
+      <div class="t-comment"># 2/2 means 2 containers running in the pod (jenkins + casc-client sidecar)</div>
+      <div class="t-comment"># Both replicas of each controller on DIFFERENT nodes — that's HA working correctly</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 4. NODE COMMANDS ── -->
+<div class="section" id="nodes">
+  <h2>&#128297; Working with Nodes</h2>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card blue">
+      <div class="cmd-card-header"><span class="icon">&#128297;</span><h4>List &amp; Inspect Nodes</h4><span class="badge">Read</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">All nodes with status</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get nodes</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Show node labels (role, type, etc.)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get nodes --show-labels</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Full details of a node</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe node &lt;node-name&gt;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card teal">
+      <div class="cmd-card-header"><span class="icon">&#128200;</span><h4>Resource Usage</h4><span class="badge">Metrics</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">CPU and memory per node</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl top nodes</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">CPU and memory per pod</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl top pods -n cloudbees</div>
+        </div>
+        <div class="cmd-note">&#9432; Requires metrics-server to be installed in the cluster.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card green">
+      <div class="cmd-card-header"><span class="icon">&#128203;</span><h4>Karpenter NodeClaims</h4><span class="badge">Karpenter</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">See what Karpenter has provisioned</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get nodeclaims</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">See NodePools</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get nodepools</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Describe a NodePool</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe nodepool controllers</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="terminal" style="margin-top:18px;">
+    <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>kubectl get nodes + top nodes</span></div>
+    <div class="terminal-body">
+      <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl get nodes -o wide</span></div>
+      <div class="t-out">NAME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;STATUS&nbsp;&nbsp;ROLES&nbsp;&nbsp;&nbsp;AGE&nbsp;&nbsp;VERSION&nbsp;&nbsp;&nbsp;INSTANCE-TYPE</div>
+      <div><span class="t-hi">ip-10-0-1-45.ec2.internal&nbsp;&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;2d&nbsp;&nbsp;&nbsp;v1.31.0&nbsp;&nbsp;&nbsp;</span><span class="t-blue">t3.large</span><span class="t-out"> &nbsp;(system)</span></div>
+      <div><span class="t-hi">ip-10-0-2-89.ec2.internal&nbsp;&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;2d&nbsp;&nbsp;&nbsp;v1.31.0&nbsp;&nbsp;&nbsp;</span><span class="t-blue">t3.large</span><span class="t-out"> &nbsp;(system)</span></div>
+      <div><span class="t-hi">ip-10-0-3-12.ec2.internal&nbsp;&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;1d&nbsp;&nbsp;&nbsp;v1.31.0&nbsp;&nbsp;&nbsp;</span><span class="t-purple">t3.xlarge</span><span class="t-out"> (controller - Karpenter)</span></div>
+      <br>
+      <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl top nodes</span></div>
+      <div class="t-out">NAME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CPU(cores)&nbsp;&nbsp;CPU%&nbsp;&nbsp;MEMORY(bytes)&nbsp;&nbsp;MEMORY%</div>
+      <div class="t-hi">ip-10-0-1-45.ec2.internal&nbsp;&nbsp;&nbsp;&nbsp;312m&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;16%&nbsp;&nbsp;&nbsp;1842Mi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;58%</div>
+      <div class="t-hi">ip-10-0-2-89.ec2.internal&nbsp;&nbsp;&nbsp;&nbsp;289m&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;14%&nbsp;&nbsp;&nbsp;1631Mi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;51%</div>
+      <div class="t-hi">ip-10-0-3-12.ec2.internal&nbsp;&nbsp;&nbsp;&nbsp;1240m&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;78%&nbsp;&nbsp;&nbsp;5812Mi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;91%</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 5. STORAGE ── -->
+<div class="section" id="storage">
+  <h2>&#128190; Storage — PVCs &amp; EFS</h2>
+  <p style="font-size:0.85rem;color:#64748b;margin-bottom:16px;">Each CBCI pod mounts its own EFS Access Point as a PersistentVolumeClaim (PVC). The PVC → PV → EFS Access Point chain is what gives Jenkins pods durable storage.</p>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card blue">
+      <div class="cmd-card-header"><span class="icon">&#128190;</span><h4>PVCs &amp; PVs</h4><span class="badge">Storage</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">List persistent volume claims</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pvc -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">List persistent volumes (cluster-wide)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pv</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Describe a PVC (shows EFS access point)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe pvc jenkins-home-cjoc-0 -n cloudbees</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card teal">
+      <div class="cmd-card-header"><span class="icon">&#128268;</span><h4>StorageClass</h4><span class="badge">Config</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">See available storage classes</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get storageclass</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Describe EFS storage class</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe storageclass efs-sc</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="terminal" style="margin-top:18px;">
+    <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>kubectl get pvc -n cloudbees</span></div>
+    <div class="terminal-body">
+      <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl get pvc -n cloudbees</span></div>
+      <div class="t-out">NAME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;STATUS&nbsp;&nbsp;VOLUME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CAPACITY&nbsp;&nbsp;ACCESS MODES&nbsp;&nbsp;STORAGECLASS</div>
+      <div><span class="t-hi">jenkins-home-cjoc-0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bound&nbsp;&nbsp;&nbsp;pvc-abc...&nbsp;&nbsp;&nbsp;&nbsp;20Gi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RWO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-blue">efs-sc</span></div>
+      <div><span class="t-hi">jenkins-home-controller-1-0&nbsp;Bound&nbsp;&nbsp;&nbsp;pvc-def...&nbsp;&nbsp;&nbsp;&nbsp;20Gi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RWX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-blue">efs-sc</span></div>
+      <div><span class="t-hi">jenkins-home-controller-1-1&nbsp;Bound&nbsp;&nbsp;&nbsp;pvc-def...&nbsp;&nbsp;&nbsp;&nbsp;20Gi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RWX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-blue">efs-sc</span></div>
+      <div><span class="t-hi">jenkins-home-controller-2-0&nbsp;Bound&nbsp;&nbsp;&nbsp;pvc-ghi...&nbsp;&nbsp;&nbsp;&nbsp;20Gi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RWX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-blue">efs-sc</span></div>
+      <div><span class="t-hi">jenkins-home-controller-2-1&nbsp;Bound&nbsp;&nbsp;&nbsp;pvc-ghi...&nbsp;&nbsp;&nbsp;&nbsp;20Gi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RWX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="t-blue">efs-sc</span></div>
+      <br>
+      <div class="t-comment"># RWO = ReadWriteOnce (OC — single pod)</div>
+      <div class="t-comment"># RWX = ReadWriteMany (controllers — both replicas share same EFS Access Point)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 6. LOGS & DEBUG ── -->
+<div class="section" id="logs">
+  <h2>&#128269; Logs, Events &amp; Debugging</h2>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card red">
+      <div class="cmd-card-header"><span class="icon">&#9888;</span><h4>Events</h4><span class="badge">Debug</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">All events in cloudbees namespace (sorted)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get events -n cloudbees --sort-by='.lastTimestamp'</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Watch events live</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get events -n cloudbees -w</div>
+        </div>
+        <div class="cmd-note">&#9432; Events are the first place to look when a pod is stuck in Pending or CrashLoopBackOff.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card purple">
+      <div class="cmd-card-header"><span class="icon">&#128203;</span><h4>StatefulSets</h4><span class="badge">Workloads</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">List all StatefulSets</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get statefulsets -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Rollout status</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl rollout status statefulset/cjoc -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Describe a StatefulSet</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe statefulset controller-1 -n cloudbees</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card orange">
+      <div class="cmd-card-header"><span class="icon">&#128260;</span><h4>ConfigMaps &amp; Secrets</h4><span class="badge">Config</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">List ConfigMaps</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get configmaps -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">List Secrets (names only — never print values)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get secrets -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">View everything in namespace</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get all -n cloudbees</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <h3>Debugging a pod stuck in Pending or CrashLoopBackOff</h3>
+  <div class="terminal">
+    <div class="terminal-bar"><div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div><span>debug flow</span></div>
+    <div class="terminal-body">
+      <div class="t-comment"># Step 1 — see the pod status</div>
+      <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl get pods -n cloudbees</span></div>
+      <div><span class="t-out">cjoc-0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0/2&nbsp;&nbsp;&nbsp;</span><span class="t-err">CrashLoopBackOff</span><span class="t-out">&nbsp;&nbsp;5&nbsp;&nbsp;&nbsp;3m</span></div>
+      <br>
+      <div class="t-comment"># Step 2 — check events to see WHY</div>
+      <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl describe pod cjoc-0 -n cloudbees</span></div>
+      <div class="t-out">Events:</div>
+      <div><span class="t-err">&nbsp;&nbsp;Warning&nbsp;&nbsp;BackOff&nbsp;&nbsp;OOMKilled — container exceeded memory limit</span></div>
+      <br>
+      <div class="t-comment"># Step 3 — check logs of the crashed container</div>
+      <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl logs cjoc-0 -n cloudbees --previous</span></div>
+      <br>
+      <div class="t-comment"># Step 4 — for Pending pods, check if Karpenter is provisioning a node</div>
+      <div><span class="t-prompt">❯ </span><span class="t-cmd">kubectl get events -n cloudbees --sort-by='.lastTimestamp' | tail -20</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 7. CASC & CBCI ── -->
+<div class="section" id="casc">
+  <h2>&#9881; CBCI-Specific Commands</h2>
+  <p style="font-size:0.85rem;color:#64748b;margin-bottom:16px;">Commands specific to checking the health of Operations Center, controllers, and CasC bundle delivery.</p>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card blue">
+      <div class="cmd-card-header"><span class="icon">&#128203;</span><h4>Check OC &amp; Controller Status</h4><span class="badge">CBCI</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">All CBCI pods at a glance</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pods -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">OC logs (Jenkins startup)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs cjoc-0 -n cloudbees -f</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Controller-1 logs</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs controller-1-0 -n cloudbees -f</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card purple">
+      <div class="cmd-card-header"><span class="icon">&#128230;</span><h4>CasC Bundle Delivery</h4><span class="badge">CasC</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">SCM Retriever logs (OC bundle polling)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs cjoc-0 -c scm-retriever -n cloudbees -f</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">casc-client logs (controller bundle pull)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs controller-1-0 -c casc-client -n cloudbees -f</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Check bundles landed on EFS</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl exec cjoc-0 -n cloudbees -- ls /var/jenkins_home/jcasc-bundles-store/</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card green">
+      <div class="cmd-card-header"><span class="icon">&#9889;</span><h4>Agent Pods</h4><span class="badge">Agents</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">Watch agents spin up during a build</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get pods -n cloudbees -w | grep agent</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Check agent node taint</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe node &lt;agent-node&gt; | grep Taint</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">View agent pod logs</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl logs &lt;agent-pod-name&gt; -n cloudbees</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-card teal">
+      <div class="cmd-card-header"><span class="icon">&#128268;</span><h4>Services &amp; Ingress</h4><span class="badge">Network</span></div>
+      <div class="cmd-card-body">
+        <div class="cmd-row">
+          <div class="cmd-label">List all services</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get svc -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">List ingress (shows ALB URL)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl get ingress -n cloudbees</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-label">Describe ingress (annotations, rules)</div>
+          <div class="cmd-line"><span class="dollar">$</span>kubectl describe ingress -n cloudbees</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── 8. CHEATSHEET ── -->
+<div class="section" id="cheatsheet">
+  <h2>&#128203; Quick Cheatsheet</h2>
+
+  <table>
+    <tr><th>What you want to do</th><th>Command</th><th>Category</th></tr>
+    <tr><td>See all pods</td><td><code>kubectl get pods -n cloudbees</code></td><td><span class="tag blue">Pods</span></td></tr>
+    <tr><td>Watch pods live</td><td><code>kubectl get pods -n cloudbees -w</code></td><td><span class="tag blue">Pods</span></td></tr>
+    <tr><td>Pod on which node</td><td><code>kubectl get pods -n cloudbees -o wide</code></td><td><span class="tag blue">Pods</span></td></tr>
+    <tr><td>Tail OC logs</td><td><code>kubectl logs -f cjoc-0 -n cloudbees</code></td><td><span class="tag green">Logs</span></td></tr>
+    <tr><td>Tail controller logs</td><td><code>kubectl logs -f controller-1-0 -n cloudbees</code></td><td><span class="tag green">Logs</span></td></tr>
+    <tr><td>Shell into OC pod</td><td><code>kubectl exec -it cjoc-0 -n cloudbees -- bash</code></td><td><span class="tag orange">Exec</span></td></tr>
+    <tr><td>Describe a pod (events)</td><td><code>kubectl describe pod cjoc-0 -n cloudbees</code></td><td><span class="tag purple">Debug</span></td></tr>
+    <tr><td>Recent events (sorted)</td><td><code>kubectl get events -n cloudbees --sort-by='.lastTimestamp'</code></td><td><span class="tag purple">Debug</span></td></tr>
+    <tr><td>All nodes status</td><td><code>kubectl get nodes</code></td><td><span class="tag teal">Nodes</span></td></tr>
+    <tr><td>Node resource usage</td><td><code>kubectl top nodes</code></td><td><span class="tag teal">Nodes</span></td></tr>
+    <tr><td>Pod resource usage</td><td><code>kubectl top pods -n cloudbees</code></td><td><span class="tag teal">Nodes</span></td></tr>
+    <tr><td>Storage volumes</td><td><code>kubectl get pvc -n cloudbees</code></td><td><span class="tag blue">Storage</span></td></tr>
+    <tr><td>Karpenter provisioned nodes</td><td><code>kubectl get nodeclaims</code></td><td><span class="tag green">Karpenter</span></td></tr>
+    <tr><td>Everything in namespace</td><td><code>kubectl get all -n cloudbees</code></td><td><span class="tag purple">General</span></td></tr>
+    <tr><td>What namespace am I in</td><td><code>kubectl config get-contexts</code></td><td><span class="tag orange">Config</span></td></tr>
+    <tr><td>Switch namespace</td><td><code>kubectl config set-context --current --namespace=cloudbees</code></td><td><span class="tag orange">Config</span></td></tr>
+    <tr><td>Crashed container logs</td><td><code>kubectl logs cjoc-0 -n cloudbees --previous</code></td><td><span class="tag red">Debug</span></td></tr>
+    <tr><td>Check ingress / ALB URL</td><td><code>kubectl get ingress -n cloudbees</code></td><td><span class="tag teal">Network</span></td></tr>
+  </table>
+
+  <div class="warn-box" style="margin-top:20px;">
+    <strong>&#9888; Careful with these:</strong> Scaling down or deleting pods will interrupt running builds. Always check with the team before running <code>kubectl scale</code> or <code>kubectl delete pod</code> on a controller in production.
+  </div>
+
+</div>
+
+</div><!-- /.container -->
+</body>
+</html>
