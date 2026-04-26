@@ -1,4 +1,5 @@
 jenkins:
+  systemMessage: "Operations Center — managed by CasC (GitOps). Auto-versioning active."
   numExecutors: 0
   authorizationStrategy:
     loggedInUsersCanDoAnything:
