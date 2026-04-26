@@ -1,9 +1,16 @@
 plugins:
-  # Only list plugins NOT already in the CBCI envelope.
-  # CBCI 2.426.2.2 ships all OC-required plugins as part of the bundle —
-  # re-declaring them generates "Skipping — Only plugins in the envelope" warnings.
-  # saml and ldap are in the envelope but explicitly declared to ensure they stay installed.
+  # saml and ldap: in the envelope but explicit to prevent accidental removal.
   - id: "saml"
   - id: "ldap"
   - id: "cloudbees-sso-relay-saml"
+  # Required for items.yaml to create managedController/folder items and for
+  # the cascAutoControllerProvisioning + bundleUpdateTiming JCasC configurators.
+  # These are shipped in the CBCI WAR (WEB-INF/plugins) but must be explicitly
+  # declared to be installed; without them OC throws UnknownAttributesException
+  # on boot for both cascAutoControllerProvisioning and bundleUpdateTiming.
+  # See: https://docs.cloudbees.com/docs/cloudbees-ci/latest/casc-oc/items
+  - id: "cloudbees-casc-items-server"
+  - id: "cloudbees-casc-items-api"
+  - id: "cloudbees-casc-items-commons"
+  - id: "cloudbees-casc-client"
 
