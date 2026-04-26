@@ -11,4 +11,3 @@ items:
 # version is overridden at runtime by the SCM Retriever (ocBundleAutomaticVersion: true
 # in values-oc.yaml) — the commit hash replaces this value before OC reads it.
 # Do NOT manually bump this number; any push to casc/oc-bundle/ is detected automatically.
-# Last validated: 2026-04-26T15:24:10Z

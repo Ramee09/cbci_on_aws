@@ -3,9 +3,6 @@ jenkins:
   numExecutors: 0
   authorizationStrategy:
     loggedInUsersCanDoAnything:
-      # true required so the casc-retriever webhook endpoint (UnprotectedRootAction)
-      # is reachable by GitHub without authentication. Logged-in users still require
-      # SAML; anonymous users can only read — no build/configure/admin access.
       allowAnonymousRead: true
   securityRealm:
     saml:
@@ -84,7 +81,6 @@ jenkins:
       usernameAttributeName: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress
       properties:
         - "relay"
-  systemMessage: CloudBees CI Operations Center — managed via CasC
 
   # Note: jenkins.users is NOT supported in CBCI 2.555.x JCasC.
   # API token injection is done by scripts/setup-api-token.sh after OC starts.

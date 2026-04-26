@@ -6,8 +6,8 @@ OperationsCenter:
   # polls every 1 minute. ocBundleAutomaticVersion replaces the version field in
   # bundle.yaml with the SCM commit hash — no manual version bumping needed.
   # Any push to casc/oc-bundle/ is detected automatically on the next poll cycle.
-  # Webhook: https://cjoc.myhomettbros.com/cjoc/casc-retriever/retriever-github-webhook/
-  # Configure that URL in GitHub repo Settings → Webhooks for instant apply on push.
+  # Note: GitHub webhooks are not used — the Jenkins RootAction endpoint blocks
+  # anonymous POST regardless of allowAnonymousRead. Polling (1 min) is sufficient.
   CasC:
     Enabled: true
     Retriever:
@@ -16,13 +16,8 @@ OperationsCenter:
       scmBranch: "main"
       scmBundlePath: "casc/oc-bundle"
       scmPollingInterval: "PT1M"
-      githubWebhooksEnabled: "true"
+      githubWebhooksEnabled: "false"
       ocBundleAutomaticVersion: "true"
-      secrets:
-        # HMAC secret for GitHub webhook signature validation (X-Hub-Signature-256).
-        # K8s secret 'github-webhook-secret' is created by bootstrap.sh from
-        # AWS Secrets Manager cbci-lab/github-webhook-secret.
-        githubWebhookSecret: github-webhook-secret
 
   # Protocol: https above makes the Helm template generate all com.cloudbees.networking.*
   # JVM properties correctly (protocol, hostname, port=443, useSubdomain).
