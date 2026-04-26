@@ -88,13 +88,12 @@ jenkins:
   globalNodeProperties: []
 
 unclassified:
-  # cascAutoControllerProvisioning and bundleUpdateTiming are temporarily omitted.
-  # These configurators are provided by CBCI managed plugins that are downloaded
-  # from the CloudBees update center on first boot — they are not available when
-  # JCasC.init fires during that first startup. They will be restored in the next
-  # bundle version once OC has booted and the plugins are captured in plugins.yaml.
-  bundleUpdateTiming:
-    rejectWarnings: false
+  # bundleUpdateTiming and cascAutoControllerProvisioning are omitted here.
+  # Both are provided by CBCI managed plugins not present in the OC image.
+  # On a fresh PVC those plugins haven't downloaded yet when JCasC.init fires,
+  # so any reference causes UnknownAttributesException / ConfigurationAsCodeBootFailure.
+  # They will be restored in a later bundle version once OC has completed its
+  # first successful boot and the managed plugins are on disk.
   bundleStorageService:
     activated: true
     pollingPeriod: 120
