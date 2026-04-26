@@ -9,15 +9,15 @@ items:
     description: "Platform team folder"
 
   - kind: managedController
-    name: citest-1
-    displayName: "CITEST-1"
+    name: controller-1
+    displayName: "Controller-1"
     approved: true
     configuration:
       kubernetes:
         disk: 20
         memory: 2048
         cpus: 1.0
-        domain: citest-1
+        domain: controller-1
         allowExternalAgents: false
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
@@ -26,7 +26,7 @@ items:
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=ci-controllers
           -Djenkins.install.runSetupWizard=false
-          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-citest-1
+          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-controller-1
         replication:
           config:
             replicas: 2
@@ -41,22 +41,22 @@ items:
                         podAffinityTerm:
                           labelSelector:
                             matchLabels:
-                              com.cloudbees.cje.tenant: citest-1
+                              com.cloudbees.cje.tenant: controller-1
                           topologyKey: kubernetes.io/hostname
     properties:
       - configurationAsCode:
-          bundle: "controller-bundles/citest-1"
+          bundle: "controller-bundles/controller-1"
 
   - kind: managedController
-    name: citest2
-    displayName: "CITEST2"
+    name: controller-2
+    displayName: "Controller-2"
     approved: true
     configuration:
       kubernetes:
         disk: 20
         memory: 2048
         cpus: 1.0
-        domain: citest2
+        domain: controller-2
         allowExternalAgents: false
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
@@ -65,7 +65,7 @@ items:
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=ci-controllers
           -Djenkins.install.runSetupWizard=false
-          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-citest2
+          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-controller-2
         replication:
           config:
             replicas: 2
@@ -80,8 +80,8 @@ items:
                         podAffinityTerm:
                           labelSelector:
                             matchLabels:
-                              com.cloudbees.cje.tenant: citest2
+                              com.cloudbees.cje.tenant: controller-2
                           topologyKey: kubernetes.io/hostname
     properties:
       - configurationAsCode:
-          bundle: "controller-bundles/citest2"
+          bundle: "controller-bundles/controller-2"

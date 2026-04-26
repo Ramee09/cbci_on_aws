@@ -1,21 +1,21 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: citest-1-pdb
+  name: controller-1-pdb
   namespace: ci-controllers
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      com.cloudbees.cje.tenant: citest-1
+      com.cloudbees.cje.tenant: controller-1
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: citest2-pdb
+  name: controller-2-pdb
   namespace: ci-controllers
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      com.cloudbees.cje.tenant: citest2
+      com.cloudbees.cje.tenant: controller-2

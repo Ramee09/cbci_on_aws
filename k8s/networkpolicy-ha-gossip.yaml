@@ -1,15 +1,15 @@
 ---
-# Allow Hazelcast gossip (TCP 5701) between replicas of the devflow controller.
-# CBCI stamps controller pods with label: tenant=<controller-domain>
+# Allow Hazelcast gossip (TCP 5701) between replicas of controller-1.
+# CBCI stamps controller pods with label: com.cloudbees.cje.tenant=<controller-name>
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: devflow-ha-gossip
-  namespace: cloudbees
+  name: controller-1-ha-gossip
+  namespace: ci-controllers
 spec:
   podSelector:
     matchLabels:
-      tenant: devflow
+      com.cloudbees.cje.tenant: controller-1
   policyTypes:
     - Ingress
     - Egress
@@ -17,7 +17,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              tenant: devflow
+              com.cloudbees.cje.tenant: controller-1
       ports:
         - port: 5701
           protocol: TCP
@@ -25,7 +25,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              tenant: devflow
+              com.cloudbees.cje.tenant: controller-1
       ports:
         - port: 5701
           protocol: TCP
@@ -37,16 +37,16 @@ spec:
           protocol: TCP
 
 ---
-# Same policy for the test1 controller.
+# Same policy for controller-2.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: test1-ha-gossip
-  namespace: cloudbees
+  name: controller-2-ha-gossip
+  namespace: ci-controllers
 spec:
   podSelector:
     matchLabels:
-      tenant: test1
+      com.cloudbees.cje.tenant: controller-2
   policyTypes:
     - Ingress
     - Egress
@@ -54,7 +54,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              tenant: test1
+              com.cloudbees.cje.tenant: controller-2
       ports:
         - port: 5701
           protocol: TCP
@@ -62,7 +62,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              tenant: test1
+              com.cloudbees.cje.tenant: controller-2
       ports:
         - port: 5701
           protocol: TCP

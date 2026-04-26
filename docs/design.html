@@ -135,14 +135,75 @@ svg a:hover .hov{opacity:1}
   text-decoration:none;box-shadow:0 4px 14px rgba(31,111,235,.4);z-index:300;
   transition:background .16s}
 .totop:hover{background:#388bfd}
+
+/* ══ ENTERPRISE ADDITIONS ══ */
+.classification{background:#7c0000;color:#fca5a5;text-align:center;font-size:0.7rem;
+  font-weight:700;letter-spacing:2px;padding:5px;text-transform:uppercase}
+.doc-meta{display:flex;flex-wrap:wrap;gap:16px;padding:8px 48px;
+  background:#0a0d12;border-bottom:1px solid #21262d;font-size:0.75rem;color:#6e7681}
+.doc-meta span strong{color:#8b949e}
+.exec-section{padding:36px 48px 32px;border-bottom:2px solid #21262d}
+.exec-section h2{font-size:1.1rem;font-weight:800;color:#e6edf3;margin-bottom:16px;
+  display:flex;align-items:center;gap:10px}
+.exec-section h2::before{content:'';width:3px;height:1.1rem;background:#1f6feb;border-radius:2px;display:inline-block}
+.exec-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.exec-card{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px 16px}
+.exec-card h3{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:#58a6ff;margin-bottom:8px}
+.exec-card ul{list-style:none;padding:0}
+.exec-card li{font-size:0.81rem;color:#8b949e;padding:3px 0;padding-left:12px;position:relative}
+.exec-card li::before{content:'›';position:absolute;left:0;color:#58a6ff}
+.exec-card li strong{color:#c9d1d9}
+.phases-section{padding:32px 48px 36px;border-bottom:2px solid #21262d}
+.phases-section h2{font-size:1.1rem;font-weight:800;color:#e6edf3;margin-bottom:18px;
+  display:flex;align-items:center;gap:10px}
+.phases-section h2::before{content:'';width:3px;height:1.1rem;background:#1f6feb;border-radius:2px;display:inline-block}
+.ptable{width:100%;border-collapse:collapse;font-size:0.81rem}
+.ptable th{background:#161b22;color:#6e7681;padding:9px 13px;text-align:left;
+  font-size:0.68rem;text-transform:uppercase;letter-spacing:.8px;font-weight:700;
+  border-bottom:1px solid #21262d}
+.ptable td{padding:9px 13px;border-bottom:1px solid #161b22;color:#c9d1d9;vertical-align:middle}
+.ptable tr:last-child td{border-bottom:none}
+.ptable td:first-child{font-weight:700;color:#8b949e;font-size:0.72rem}
+.ptable td:nth-child(2){font-weight:600;color:#e6edf3}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;letter-spacing:.5px}
+.badge.done{background:#0f2519;color:#3fb950;border:1px solid #238636}
+.badge.wip{background:#1a1000;color:#d97706;border:1px solid #d97706}
+.badge.planned{background:#0d1f3c;color:#58a6ff;border:1px solid #1f6feb}
+
+/* ADR + Code Refs + Ops Notes */
+.adr{background:#12091f;border:1px solid #3b2060;border-radius:8px;padding:14px 16px;margin:18px 0}
+.adr-title{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;
+  color:#bc8cff;margin-bottom:10px}
+.adr table{width:100%;border-collapse:collapse;font-size:0.8rem}
+.adr td{padding:6px 10px;border-bottom:1px solid #21262d;vertical-align:top;color:#8b949e;line-height:1.55}
+.adr tr:last-child td{border-bottom:none}
+.adr td:first-child{color:#bc8cff;font-weight:700;white-space:nowrap;width:120px;font-size:0.72rem}
+.adr code{background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;font-size:0.77rem;color:#e6edf3}
+.crefsrow{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.cref{display:inline-flex;align-items:center;gap:5px;background:#0d1a2e;border:1px solid #1f4068;
+  border-radius:5px;padding:4px 10px;font-size:0.72rem;text-decoration:none;color:#58a6ff;
+  font-family:monospace;transition:border-color .14s,background .14s}
+.cref:hover{background:#0d2140;border-color:#388bfd;color:#79c0ff}
+.cref-icon{font-size:0.8rem}
+.ops{background:#0a1200;border:1px solid #1a3a00;border-radius:8px;padding:13px 16px;margin-top:18px}
+.ops-title{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;
+  color:#3fb950;margin-bottom:8px}
+.ops ul{list-style:none;padding:0}
+.ops li{font-size:0.8rem;color:#8b949e;padding:4px 0 4px 14px;position:relative;line-height:1.5}
+.ops li::before{content:'▸';position:absolute;left:0;color:#238636;font-size:0.7rem;top:5px}
+.ops li strong{color:#c9d1d9}
+.ops li code{background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;font-size:0.77rem;color:#79c0ff}
 </style>
 </head>
 <body>
 
+<div class="classification">INTERNAL — Platform Engineering — Not for External Distribution</div>
+
 <!-- ══════════ TOP BAR ══════════ -->
 <div class="topbar" id="top">
-  <h1>CBCI on AWS — Architecture &amp; Design</h1>
-  <p>CloudBees CI (Modern) on Amazon EKS · Single-page reference · Click any component or step to jump to its Low Level Design</p>
+  <h1>CloudBees CI on AWS — Platform Implementation Plan</h1>
+  <p>Enterprise CI/CD Platform · Amazon EKS · Active-Active HA · GitOps-First · Zero-Trust Secrets · Entra ID SAML SSO</p>
   <div class="chips">
     <div class="chip"><strong>Region:</strong> us-east-1</div>
     <div class="chip"><strong>EKS:</strong> 1.31</div>
@@ -153,12 +214,25 @@ svg a:hover .hov{opacity:1}
     <div class="chip"><strong>GitOps:</strong> casc-retriever + git-sync</div>
   </div>
 </div>
+<div class="doc-meta">
+  <span><strong>Document:</strong> Platform Architecture &amp; Implementation Reference</span>
+  <span><strong>Version:</strong> 1.0</span>
+  <span><strong>Date:</strong> 2026-04-26</span>
+  <span><strong>Owner:</strong> Platform Engineering</span>
+  <span><strong>Classification:</strong> INTERNAL</span>
+  <span><strong>Repo:</strong> <a href="https://github.com/Ramee09/cbci_on_aws" target="_blank" style="color:#58a6ff">Ramee09/cbci_on_aws</a></span>
+</div>
 
 <div class="layout">
 
 <!-- ══════════ SIDEBAR ══════════ -->
 <nav class="sidebar">
-  <div class="sidebar-group">Overview</div>
+  <div class="sidebar-group">Document</div>
+  <ul>
+    <li><a href="#exec-summary">Executive Summary</a></li>
+    <li><a href="#phases">Implementation Phases</a></li>
+  </ul>
+  <div class="sidebar-group">Architecture</div>
   <ul>
     <li><a href="#hld">High Level Design</a></li>
     <li><a href="#e2e">End-to-End Flow</a></li>
@@ -175,11 +249,82 @@ svg a:hover .hov{opacity:1}
     <li><a href="#storage">8. Storage (EFS)</a></li>
     <li><a href="#secrets">9. Secrets</a></li>
     <li><a href="#github-actions">10. GHA OIDC</a></li>
+    <li><a href="#backup-restore">11. Backup &amp; Restore</a></li>
   </ul>
 </nav>
 
 <!-- ══════════ MAIN ══════════ -->
 <main class="main">
+
+<!-- ══════════ EXECUTIVE SUMMARY ══════════ -->
+<section class="exec-section" id="exec-summary">
+  <h2>Executive Summary</h2>
+  <div class="exec-grid">
+    <div class="exec-card">
+      <h3>Platform Overview</h3>
+      <ul>
+        <li>Enterprise CI/CD platform on <strong>Amazon EKS 1.31</strong> (us-east-1, 3 AZs)</li>
+        <li><strong>CloudBees CI (Modern) 2.555.x</strong> — Operations Center + 2 managed controllers</li>
+        <li>Both controllers in <strong>active-active HA</strong> (2 replicas each, cross-AZ)</li>
+        <li><strong>GitOps-first</strong>: zero UI config — all config is CasC in Git</li>
+        <li><strong>Entra ID SAML 2.0</strong> SSO with group-based RBAC</li>
+      </ul>
+    </div>
+    <div class="exec-card">
+      <h3>Architecture Pillars</h3>
+      <ul>
+        <li><strong>Zero-trust secrets</strong>: AWS Secrets Manager + no static creds in Git</li>
+        <li><strong>Keyless CI auth</strong>: GitHub Actions OIDC — no long-lived AWS keys</li>
+        <li><strong>Cloud-native scaling</strong>: Karpenter spot agents, on-demand controllers</li>
+        <li><strong>Resilient storage</strong>: Amazon EFS RWX — survives node or AZ failure</li>
+        <li><strong>Data protection</strong>: AWS Backup (EFS) + Velero (K8s resources)</li>
+      </ul>
+    </div>
+    <div class="exec-card">
+      <h3>Key Metrics</h3>
+      <ul>
+        <li>Config propagation: <strong>&lt; 3 minutes</strong> (git push → live)</li>
+        <li>Agent provisioning: <strong>~30 seconds</strong> (Karpenter spot EC2)</li>
+        <li>GHA credential lifetime: <strong>15 minutes</strong> (OIDC temp creds)</li>
+        <li>Controller HA: <strong>minAvailable=1</strong> guaranteed by PDB</li>
+        <li>EFS backup RPO: <strong>24h</strong> daily · RTO: <strong>&lt; 1h</strong> (EFS restore)</li>
+      </ul>
+    </div>
+    <div class="exec-card">
+      <h3>Compliance &amp; Governance</h3>
+      <ul>
+        <li>All secrets KMS-encrypted at rest (EFS + Secrets Manager)</li>
+        <li>No plaintext credentials in Git history</li>
+        <li>IAM least-privilege: GHA role permits <code>eks:DescribeCluster</code> only</li>
+        <li>SAML <code>forceAuthn</code>: fresh assertion required per session</li>
+        <li>All K8s manifests version-pinned — no <code>latest</code> tags</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ IMPLEMENTATION PHASES ══════════ -->
+<section class="phases-section" id="phases">
+  <h2>Implementation Phases</h2>
+  <table class="ptable">
+    <thead><tr><th>#</th><th>Phase</th><th>Scope</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>01</td><td>AWS Networking</td><td>VPC 10.0.0.0/16 · 3 AZs · public/private subnets · single NAT Gateway · Route 53 hosted zone</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>02</td><td>EKS Cluster</td><td>EKS 1.31 · Managed Node Group (system) · aws-auth ConfigMap · AWS LB Controller · ExternalDNS · EFS CSI driver</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>03</td><td>Karpenter Node Pools</td><td>3 NodePools: system (MNG) · controllers (on-demand t3.large) · agents (spot + OD fallback, taint)</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>04</td><td>Storage (EFS)</td><td>EFS filesystem · KMS encryption · Elastic throughput · StorageClass efs-ap · subPathPattern Access Points</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>05</td><td>CBCI Installation</td><td>Helm chart cloudbees/cloudbees-core · OC StatefulSet · SSO Relay · ALB ingress · ACM TLS</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>06</td><td>GitOps / CasC Delivery</td><td>casc-retriever (OC bundle, 1min) · git-sync sidecar (controller bundles, 60s) · bundleStorageService · ocBundleAutomaticVersion</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>07</td><td>HA Managed Controllers</td><td>controller-1 + controller-2 · 2 replicas each · EFS RWX · PodDisruptionBudget · pod anti-affinity · Hazelcast gossip NetworkPolicy</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>08</td><td>Identity &amp; SSO</td><td>Entra ID Enterprise App · SAML 2.0 · SSO Relay · group OID → Jenkins role mapping · forceAuthn · ALB sticky sessions</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>09</td><td>Secrets Management</td><td>AWS Secrets Manager · bootstrap.sh pull → K8s Secret · casc-retriever creds · JENKINS_ADMIN_PASSWORD injection</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>10</td><td>GHA OIDC Keyless Auth</td><td>GitHub OIDC provider · IAM role cbci-github-actions · aws-auth mapping · controller-namespace-sync workflow</td><td><span class="badge done">DONE</span></td></tr>
+      <tr><td>11</td><td>RBAC (Group Mapping)</td><td>Map Entra group OID a928ae2a → cbci-admins Jenkins role via OC CasC jenkins.yaml</td><td><span class="badge planned">PLANNED</span></td></tr>
+      <tr><td>12</td><td>Backup &amp; Restore</td><td>AWS Backup plan for EFS · Velero for K8s resources · backup schedules · restore runbook</td><td><span class="badge wip">IN PROGRESS</span></td></tr>
+      <tr><td>13</td><td>Observability</td><td>kube-prometheus-stack · Fluent Bit → CloudWatch · Grafana dashboards · alerting</td><td><span class="badge planned">PLANNED</span></td></tr>
+    </tbody>
+  </table>
+</section>
 
 <!-- ──────────────────────────────────────
      HLD — INTERACTIVE SVG DIAGRAM
@@ -280,7 +425,7 @@ svg a:hover .hov{opacity:1}
     <rect x="12" y="258" width="840" height="540" rx="12"
           fill="#0a1628" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="8,4"/>
     <text x="26" y="276" font-size="9" font-weight="700" fill="#388bfd" letter-spacing="1">
-      EKS CLUSTER — cbci-lab  ·  Kubernetes 1.31  ·  3 Availability Zones
+      EKS CLUSTER — cbci-platform  ·  Kubernetes 1.31  ·  3 Availability Zones
     </text>
 
     <!-- ci-controllers namespace -->
@@ -310,33 +455,33 @@ svg a:hover .hov{opacity:1}
     <title>→ Operations Center LLD</title>
     </a>
 
-    <!-- citest-1 -->
+    <!-- controller-1 -->
     <a href="#ha-controllers">
     <rect x="278" y="308" width="194" height="115" rx="8" fill="#0f2519" stroke="#238636" stroke-width="2"/>
     <rect class="hov" x="278" y="308" width="194" height="115" rx="8"/>
     <rect x="278" y="308" width="194" height="25" rx="8" fill="#238636"/>
     <rect x="278" y="322" width="194" height="11" fill="#238636"/>
-    <text x="375" y="325" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">citest-1 (HA)</text>
+    <text x="375" y="325" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">controller-1 (HA)</text>
     <text x="375" y="351" text-anchor="middle" font-size="8.5" fill="#3fb950">2 replicas · PDB minAvailable=1</text>
     <text x="375" y="365" text-anchor="middle" font-size="8" fill="#6e7681">Anti-affinity → spread AZs</text>
     <text x="375" y="379" text-anchor="middle" font-size="8" fill="#6e7681">EFS Access Point (RWX)</text>
     <text x="375" y="393" text-anchor="middle" font-size="7.5" fill="#8b949e">on-demand · t3.large · role=controller</text>
-    <text x="375" y="413" text-anchor="middle" font-size="7" fill="#6e7681">label: com.cloudbees.cje.tenant=citest-1</text>
+    <text x="375" y="413" text-anchor="middle" font-size="7" fill="#6e7681">label: com.cloudbees.cje.tenant=controller-1</text>
     <title>→ HA Controllers LLD</title>
     </a>
 
-    <!-- citest2 -->
+    <!-- controller-2 -->
     <a href="#ha-controllers">
     <rect x="278" y="436" width="194" height="115" rx="8" fill="#0f2519" stroke="#238636" stroke-width="2"/>
     <rect class="hov" x="278" y="436" width="194" height="115" rx="8"/>
     <rect x="278" y="436" width="194" height="25" rx="8" fill="#238636"/>
     <rect x="278" y="450" width="194" height="11" fill="#238636"/>
-    <text x="375" y="453" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">citest2 (HA)</text>
+    <text x="375" y="453" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">controller-2 (HA)</text>
     <text x="375" y="479" text-anchor="middle" font-size="8.5" fill="#3fb950">2 replicas · PDB minAvailable=1</text>
     <text x="375" y="493" text-anchor="middle" font-size="8" fill="#6e7681">Anti-affinity → spread AZs</text>
     <text x="375" y="507" text-anchor="middle" font-size="8" fill="#6e7681">EFS Access Point (RWX)</text>
     <text x="375" y="521" text-anchor="middle" font-size="7.5" fill="#8b949e">on-demand · t3.large · role=controller</text>
-    <text x="375" y="541" text-anchor="middle" font-size="7" fill="#6e7681">label: com.cloudbees.cje.tenant=citest2</text>
+    <text x="375" y="541" text-anchor="middle" font-size="7" fill="#6e7681">label: com.cloudbees.cje.tenant=controller-2</text>
     <title>→ HA Controllers LLD</title>
     </a>
 
@@ -349,12 +494,12 @@ svg a:hover .hov{opacity:1}
     <rect x="502" y="316" width="150" height="76" rx="6" fill="#0d1f3c" stroke="#1f6feb" stroke-width="1"/>
     <text x="577" y="336" text-anchor="middle" font-size="9" fill="#58a6ff" font-weight="600">Node: t3.large</text>
     <text x="577" y="350" text-anchor="middle" font-size="7.5" fill="#6e7681">AZ: us-east-1a</text>
-    <text x="577" y="363" text-anchor="middle" font-size="7.5" fill="#6e7681">citest-1 replica-0</text>
+    <text x="577" y="363" text-anchor="middle" font-size="7.5" fill="#6e7681">controller-1 replica-0</text>
     <text x="577" y="376" text-anchor="middle" font-size="7" fill="#8b949e">role=controller</text>
     <rect x="668" y="316" width="150" height="76" rx="6" fill="#0d1f3c" stroke="#1f6feb" stroke-width="1"/>
     <text x="743" y="336" text-anchor="middle" font-size="9" fill="#58a6ff" font-weight="600">Node: t3.large</text>
     <text x="743" y="350" text-anchor="middle" font-size="7.5" fill="#6e7681">AZ: us-east-1b</text>
-    <text x="743" y="363" text-anchor="middle" font-size="7.5" fill="#6e7681">citest-1 replica-1</text>
+    <text x="743" y="363" text-anchor="middle" font-size="7.5" fill="#6e7681">controller-1 replica-1</text>
     <text x="743" y="376" text-anchor="middle" font-size="7" fill="#8b949e">role=controller</text>
     <rect x="502" y="406" width="316" height="128" rx="6" fill="#0d1f3c" stroke="#1f6feb" stroke-width="1"/>
     <text x="660" y="424" text-anchor="middle" font-size="9" fill="#58a6ff" font-weight="600">System Managed Node Group (t3.xlarge)</text>
@@ -362,7 +507,7 @@ svg a:hover .hov{opacity:1}
     <text x="660" y="454" text-anchor="middle" font-size="8" fill="#6e7681">AWS LB Controller · ExternalDNS · EFS CSI</text>
     <text x="660" y="468" text-anchor="middle" font-size="8" fill="#6e7681">Karpenter controller · CoreDNS</text>
     <text x="660" y="484" text-anchor="middle" font-size="7.5" fill="#8b949e">on-demand · always running · fixed size</text>
-    <text x="660" y="500" text-anchor="middle" font-size="7.5" fill="#8b949e">citest2 replicas (AZ pair: 1b + 1c)</text>
+    <text x="660" y="500" text-anchor="middle" font-size="7.5" fill="#8b949e">controller-2 replicas (AZ pair: 1b + 1c)</text>
     <text x="660" y="516" text-anchor="middle" font-size="7" fill="#6e7681">NAT Gateway in us-east-1a for outbound</text>
     <title>→ EKS Node Pools LLD</title>
     </a>
@@ -371,7 +516,7 @@ svg a:hover .hov{opacity:1}
     <rect x="22" y="574" width="820" height="212" rx="8"
           fill="rgba(217,119,6,0.04)" stroke="#d97706" stroke-width="1" stroke-dasharray="5,3"/>
     <text x="34" y="591" font-size="8.5" fill="#d97706" font-weight="700" letter-spacing="0.8">
-      NAMESPACES: ci-agents-citest-1  ·  ci-agents-citest2   (Karpenter: agents NodePool · spot)
+      NAMESPACES: ci-agents-controller-1  ·  ci-agents-controller-2   (Karpenter: agents NodePool · spot)
     </text>
 
     <!-- agent pods -->
@@ -445,8 +590,8 @@ svg a:hover .hov{opacity:1}
     <rect x="868" y="380" width="178" height="24" rx="8" fill="#dc2626"/>
     <rect x="868" y="392" width="178" height="12" fill="#dc2626"/>
     <text x="957" y="397" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">AWS Secrets Manager</text>
-    <text x="957" y="422" text-anchor="middle" font-size="8" fill="#f87171">cbci-lab/jenkins-admin-secret</text>
-    <text x="957" y="436" text-anchor="middle" font-size="8" fill="#f87171">cbci-lab/github-webhook-secret</text>
+    <text x="957" y="422" text-anchor="middle" font-size="8" fill="#f87171">cbci/jenkins-admin-secret</text>
+    <text x="957" y="436" text-anchor="middle" font-size="8" fill="#f87171">cbci/github-webhook-secret</text>
     <text x="957" y="450" text-anchor="middle" font-size="8" fill="#6e7681">→ K8s secrets via bootstrap.sh</text>
     <text x="957" y="464" text-anchor="middle" font-size="7.5" fill="#8b949e">no static creds in Git</text>
     <title>→ Secrets LLD</title>
@@ -549,7 +694,7 @@ svg a:hover .hov{opacity:1}
   <a class="step" href="#github-actions">
     <div class="sn">3</div>
     <div class="sa">controller-namespace-sync (GHA)</div>
-    <div class="sd">Fires on push to <code>main</code> if <code>casc/oc-bundle/items.yaml</code> changed. GitHub mints OIDC JWT → STS returns 15-min temp creds → <code>sync-agent-namespaces.sh</code> creates/updates <code>ci-agents-*</code> namespaces with RBAC, ResourceQuota, LimitRange.</div>
+    <div class="sd">Fires on push to <code>main</code> if <code>casc/oc-bundle/items.yaml</code> changed. GitHub mints OIDC JWT → STS returns 15-min temp creds → <code>sync-agent-namespaces.sh</code> creates/updates <code>ci-agents-controller-1</code> and <code>ci-agents-controller-2</code> namespaces with RBAC, ResourceQuota, LimitRange.</div>
     <div class="sl">↓ GHA OIDC LLD</div>
   </a>
 
@@ -598,7 +743,7 @@ svg a:hover .hov{opacity:1}
   <a class="step" href="#build-agents">
     <div class="sn">10</div>
     <div class="sa">Build Agent lifecycle</div>
-    <div class="sd">User triggers a pipeline. Controller creates agent pod in <code>ci-agents-citest-1</code> with <code>toleration: workload=agents</code>. Karpenter detects unschedulable pod → provisions spot EC2 (~30s) → agent connects via JNLP → build runs → pod deleted → node terminates if idle.</div>
+    <div class="sd">User triggers a pipeline. Controller creates agent pod in <code>ci-agents-controller-1</code> with <code>toleration: workload=agents</code>. Karpenter detects unschedulable pod → provisions spot EC2 (~30s) → agent connects via JNLP → build runs → pod deleted → node terminates if idle.</div>
     <div class="sl">↓ Agents LLD</div>
   </a>
 
@@ -612,7 +757,14 @@ svg a:hover .hov{opacity:1}
 <section class="lld-section" id="gitops">
   <div class="sec-header"><div class="sec-num">1</div><div class="sec-title">GitOps / CasC Bundle Delivery</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td>Dual-path CasC delivery: <strong>casc-retriever</strong> for OC bundle + <strong>git-sync + bundleStorageService</strong> for controller bundles. No GitHub webhooks.</td></tr><tr><td>Alternatives</td><td>(a) Webhooks from GitHub to OC — blocked: Jenkins RootAction endpoint rejects anonymous POST. (b) Single path via casc-retriever for all bundles — doesn't support controller bundle hot-push. (c) ConfigMap-mounted bundles — no GitOps, requires kubectl apply per change.</td></tr><tr><td>Rationale</td><td>Polling is idempotent and survives network blips. <code>ocBundleAutomaticVersion</code> eliminates manual version bumping. The git-sync emptyDir pattern decouples GitHub availability from OC restart cycles. Max 3-min lag is acceptable for platform config changes.</td></tr></table></div>
   <p class="prose">All Jenkins configuration is code in this Git repo — no UI clicking. Two parallel delivery paths exist. <strong>Path A</strong> — OC bundle via the <code>casc-retriever</code> Quarkus sidecar. <strong>Path B</strong> — controller bundles via the <code>git-sync</code> sidecar + OC's <code>bundleStorageService</code>. Total propagation from <code>git push</code> to live config: up to <strong>3 minutes</strong>.</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/helm/values-oc.yaml#L11-L20" target="_blank"><span class="cref-icon">📄</span>helm/values-oc.yaml:L11-L20 — CasC retriever config</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/casc/oc-bundle/bundle.yaml#L1-L13" target="_blank"><span class="cref-icon">📄</span>casc/oc-bundle/bundle.yaml:L1-L13 — bundle + ocBundleAutomaticVersion</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/casc/controller-bundles/controller-1/bundle.yaml#L4-L6" target="_blank"><span class="cref-icon">📄</span>controller-bundles/controller-1/bundle.yaml:L4-L6 — parent inheritance</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/casc/oc-bundle/jenkins.yaml#L91-L110" target="_blank"><span class="cref-icon">📄</span>casc/oc-bundle/jenkins.yaml:L91-L110 — bundleStorageService config</a>
+  </div>
   <div class="box green"><h4>How ocBundleAutomaticVersion works</h4><p>The <code>casc-retriever</code> replaces the <code>version</code> field in <code>bundle.yaml</code> with the current git commit SHA before writing to disk. OC sees every push as a unique version — any push triggers reload. You never manually bump the version number.</p></div>
   <div class="dg"><div class="dg-label">Sequence — CasC Bundle Delivery</div>
   <div class="mermaid">
@@ -653,13 +805,24 @@ sequenceDiagram
     <tr><td>bundleStorageService</td><td>120 s</td><td>Controller bundles → managed controllers</td></tr>
     <tr><td>ConfigurationUpdaterHelper</td><td>2 min</td><td>Applies OC bundle (jenkins.yaml, plugins, items)</td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li>To force immediate OC bundle reload: <code>kubectl rollout restart statefulset/cjoc -n ci-controllers</code> — casc-retriever picks up HEAD on next startup.</li>
+    <li>To debug CasC reload: check OC pod logs for <code>ConfigurationUpdaterHelper</code> and <code>casc-retriever</code> containers separately.</li>
+    <li><strong>Controller bundle updates</strong> do not require OC restart — bundleStorageService pushes via internal CBCI API. Monitor in OC UI: Manage Jenkins → Configuration as Code → Bundle Storage Service.</li>
+    <li>If a controller bundle fails validation, OC rejects the push and keeps the previous bundle. The controller stays online with the last known-good config.</li>
+  </ul></div>
 </section>
 
 <!-- 2. Networking -->
 <section class="lld-section" id="networking">
   <div class="sec-header"><div class="sec-num">2</div><div class="sec-title">Networking &amp; Ingress</div></div>
   <div class="divider"></div>
-  <p class="prose">VPC spans <strong>3 Availability Zones</strong>. EKS nodes sit in private subnets. All inbound traffic enters through the <strong>ALB</strong> (managed by AWS Load Balancer Controller). TLS is terminated at the ALB using <strong>ACM</strong>. A single NAT Gateway handles outbound (~$32/mo — lab cost trade-off).</p>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td>Single NAT Gateway (us-east-1a only). AWS Load Balancer Controller with <strong>ALB</strong> as ingress. ACM for TLS. All CBCI ingresses share one ALB group (<code>cbci-oc</code>).</td></tr><tr><td>Alternatives</td><td>(a) 3 NAT Gateways (one per AZ) — full HA for outbound; costs ~$96/mo vs $32/mo. (b) NGINX ingress — not AWS-native, requires separate NLB. (c) Self-managed TLS — certificate rotation burden, not free.</td></tr><tr><td>Rationale</td><td>Single NAT is acceptable for this environment — AZ failure is an accepted risk for outbound only; inbound HA is provided by ALB. ALB group pattern shares one load balancer across OC + all controller ingresses, reducing cost and listener rules. ACM auto-renews — zero operational toil.</td></tr></table></div>
+  <p class="prose">VPC spans <strong>3 Availability Zones</strong>. EKS nodes sit in private subnets. All inbound traffic enters through the <strong>ALB</strong> (managed by AWS Load Balancer Controller). TLS is terminated at the ALB using <strong>ACM</strong>. A single NAT Gateway handles outbound (~$32/mo cost-conscious design).</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/helm/values-oc.yaml#L114-L134" target="_blank"><span class="cref-icon">📄</span>helm/values-oc.yaml:L114-L134 — OC ALB ingress annotations</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/helm/values-oc.yaml#L137-L157" target="_blank"><span class="cref-icon">📄</span>helm/values-oc.yaml:L137-L157 — Controller ingress annotations</a>
+  </div>
   <div class="box blue"><h4>Why sticky sessions on the ALB?</h4><p>SAML login state is in-memory per OC pod. Without stickiness, the ALB could route the <code>/finishLogin</code> callback to a different pod than the one that generated the <code>AuthnRequest</code> → 403. Cookie-based stickiness (<code>lb_cookie</code>, 24h) pins each user's session to one pod.</p></div>
   <div class="dg"><div class="dg-label">Flowchart — Network Topology</div>
   <div class="mermaid">
@@ -678,7 +841,7 @@ flowchart TB
         ALBCTL["AWS LB Controller\n→ creates ALB from Ingress"]
         EXT["ExternalDNS\n→ writes Route53 A records"]
         OC["OC · cjoc.myhomettbros.com/cjoc/"]
-        MC["Controllers\ncitest-1.myhomettbros.com\ncitest2.myhomettbros.com"]
+        MC["Controllers\ncontroller-1.myhomettbros.com\ncontroller-2.myhomettbros.com"]
       end
     end
   end
@@ -699,14 +862,25 @@ flowchart TB
     <tr><td>Sticky sessions</td><td>lb_cookie · 86400s</td><td>SAML in-memory state per pod</td></tr>
     <tr><td>ALB group</td><td><code>cbci-oc</code></td><td>OC + all controller ingresses share one ALB</td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li>ALB is provisioned by the AWS Load Balancer Controller — never create or modify it manually in the AWS console. Changes go in Helm values or Ingress annotations.</li>
+    <li>ExternalDNS writes Route 53 A records automatically from Ingress <code>hostname</code> fields. DNS TTL is 300s — allow 5 min after new controller provisioning for DNS to propagate.</li>
+    <li><strong>ACM certificate renewal</strong> is automatic. Verify in ACM console that the DNS CNAME validation record exists in Route 53 (ExternalDNS does not manage this record — it must exist from initial setup).</li>
+    <li>To add a new controller ingress: add the controller to <code>casc/oc-bundle/items.yaml</code>. CBCI auto-creates the Ingress using the <code>Master.Ingress</code> annotations from Helm values.</li>
+  </ul></div>
 </section>
 
 <!-- 3. Identity -->
 <section class="lld-section" id="identity">
   <div class="sec-header"><div class="sec-num">3</div><div class="sec-title">Identity &amp; SSO (Entra ID SAML 2.0)</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>SAML 2.0 with Microsoft Entra ID</strong> via CloudBees SSO Relay (Quarkus). Group-based RBAC using Entra group Object IDs. HTTP-POST binding. forceAuthn=true.</td></tr><tr><td>Alternatives</td><td>(a) OIDC with Entra — OC OIDC plugin has known session state issues in active-active HA; SAML is the CloudBees-recommended HA path. (b) Azure AD plugin — vendor-specific, less portable, deprecated path. (c) Local users only — not enterprise-grade, no centralized identity lifecycle.</td></tr><tr><td>Rationale</td><td>SAML 2.0 is the production-proven pattern for CBCI HA. The SSO Relay decouples the SAML SP logic from OC's JVM — multiple relay replicas handle the AuthnRequest/ACS flow independently. ALB sticky sessions ensure the callback lands on the same relay pod that issued the request.</td></tr></table></div>
   <p class="prose">Authentication uses <strong>Microsoft Entra ID</strong> as the SAML 2.0 IdP. The <strong>SSO Relay</strong> (Quarkus, 2 replicas) handles the SAML SP flow — builds the AuthnRequest, validates the assertion, and passes the authenticated user to OC. Group membership arrives as Entra group Object IDs in the <code>groups</code> claim.</p>
-  <div class="box purple"><h4>Why SAML not OIDC?</h4><p>SAML is preferred for CBCI active-active HA. The SAML plugin handles cross-replica session state better. It also mirrors the Mastercard production pattern and is more portable across IdPs.</p></div>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/casc/oc-bundle/jenkins.yaml#L7-L16" target="_blank"><span class="cref-icon">📄</span>casc/oc-bundle/jenkins.yaml:L7-L16 — SAML securityRealm config</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/helm/values-oc.yaml#L159-L180" target="_blank"><span class="cref-icon">📄</span>helm/values-oc.yaml:L159-L180 — SSO Relay deployment config</a>
+  </div>
+  <div class="box purple"><h4>Why SAML not OIDC?</h4><p>SAML is preferred for CBCI active-active HA. The SAML plugin handles cross-replica session state better. It also mirrors enterprise production patterns and is more portable across IdPs.</p></div>
   <div class="box orange"><h4>forceAuthn: true — why it matters</h4><p>Without this, Entra can return a cached assertion. If that assertion is older than <code>maximumAuthenticationLifetime</code>, CBCI throws <code>SAMLAuthnInstantException</code>. <code>forceAuthn: true</code> forces Entra to issue a fresh assertion every login.</p></div>
   <div class="dg"><div class="dg-label">Sequence — SAML Login Flow</div>
   <div class="mermaid">
@@ -746,13 +920,26 @@ sequenceDiagram
     <tr><td>Max auth lifetime</td><td>86400 s (24h)</td></tr>
     <tr><td>SSO Relay replicas</td><td>2</td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>SAML metadata refresh</strong>: if Entra rotates its signing certificate, update the IdP metadata XML in <code>casc/oc-bundle/jenkins.yaml</code> and push to Git — casc-retriever propagates within 1 minute.</li>
+    <li>SSO Relay logs: <code>kubectl logs -n ci-controllers -l app=cjoc-ssorelay</code>. Look for <code>SAMLResponse validation failed</code> to diagnose assertion issues.</li>
+    <li><strong>Emergency local admin</strong>: if SSO is broken, the local admin account (password from <code>jenkins-admin-secret</code>) bypasses SAML. Access via direct pod port-forward: <code>kubectl port-forward svc/cjoc 8080:80 -n ci-controllers</code>.</li>
+    <li>Group RBAC: Entra group Object IDs are mapped in <code>jenkins.yaml</code> authorization matrix. If a user reports missing permissions, verify their Entra group membership and the OID mapping in CasC.</li>
+  </ul></div>
 </section>
 
 <!-- 4. EKS -->
 <section class="lld-section" id="eks">
   <div class="sec-header"><div class="sec-num">4</div><div class="sec-title">EKS Cluster &amp; Karpenter Node Pools</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>Hybrid strategy</strong>: fixed Managed Node Group (MNG) for system/OC pods + Karpenter for controllers (on-demand) and agents (spot with OD fallback). Three NodePools with node labels and taints for hard isolation.</td></tr><tr><td>Alternatives</td><td>(a) All Karpenter — no fixed nodes; Karpenter churn could evict OC during consolidation. (b) All MNG — no spot savings; no elastic scaling for bursty agent workloads. (c) Separate EKS clusters for agents — extreme complexity, cross-cluster networking overhead.</td></tr><tr><td>Rationale</td><td>MNG for system/OC provides a stable, always-on foundation without Karpenter consolidation risk. Karpenter handles elastic demand. The <code>workload=agents:NoSchedule</code> taint is the critical guard — without it, Karpenter spot interruptions could terminate controller nodes mid-build.</td></tr></table></div>
   <p class="prose">Hybrid node strategy: a fixed <strong>Managed Node Group</strong> for critical system pods, and <strong>Karpenter</strong> for dynamic controller + agent nodes. Three distinct NodePools enforce isolation via node labels and taints, preventing agent churn from evicting controller pods.</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/karpenter/nodepool-controllers.yaml#L1-L32" target="_blank"><span class="cref-icon">📄</span>k8s/karpenter/nodepool-controllers.yaml:L1-L32 — controllers NodePool</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/karpenter/nodepool-agents.yaml#L11-L15" target="_blank"><span class="cref-icon">📄</span>k8s/karpenter/nodepool-agents.yaml:L11-L15 — agents taint</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/karpenter/nodepool-agents.yaml#L20-L29" target="_blank"><span class="cref-icon">📄</span>k8s/karpenter/nodepool-agents.yaml:L20-L29 — spot + OD requirements</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/networkpolicy-ha-gossip.yaml#L1-L36" target="_blank"><span class="cref-icon">📄</span>k8s/networkpolicy-ha-gossip.yaml:L1-L36 — Hazelcast gossip NetworkPolicy</a>
+  </div>
   <div class="dg"><div class="dg-label">Flowchart — Node Pools &amp; Pod Scheduling</div>
   <div class="mermaid">
 flowchart LR
@@ -762,8 +949,8 @@ flowchart LR
       S2["ci-controllers: OC pod\nSSO Relay (×2)"]
     end
     subgraph ctrl["Karpenter: controllers (on-demand)"]
-      C1["Node t3.large · AZ 1a\ncitest-1 replica-0\ncitest2 replica-0"]
-      C2["Node t3.large · AZ 1b\ncitest-1 replica-1\ncitest2 replica-1"]
+      C1["Node t3.large · AZ 1a\ncontroller-1 replica-0\ncontroller-2 replica-0"]
+      C2["Node t3.large · AZ 1b\ncontroller-1 replica-1\ncontroller-2 replica-1"]
     end
     subgraph agts["Karpenter: agents (spot + OD fallback)"]
       A1["Spot Node · m5/t3\ntaint: workload=agents:NoSchedule\nrole=agent · auto-provisioned"]
@@ -784,13 +971,25 @@ flowchart LR
     <tr><td>controllers</td><td>On-demand</td><td>t3.large</td><td>Managed controller pods</td><td><code>role=controller</code></td></tr>
     <tr><td>agents</td><td>Spot + OD fallback</td><td>m5/t3 family</td><td>Ephemeral build pods</td><td><code>workload=agents:NoSchedule</code></td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>Karpenter consolidation on controllers pool</strong> is set to <code>WhenEmpty</code> only — it will NOT evict running controller pods. This is critical: <code>WhenEmptyOrUnderutilized</code> must never be used for the controllers pool.</li>
+    <li>To drain a controller node safely: cordon it first (<code>kubectl cordon &lt;node&gt;</code>), wait for PDB to confirm safe eviction window, then drain. The PDB ensures one replica stays live.</li>
+    <li><strong>Spot interruption</strong>: Karpenter handles EC2 spot interruption notices (2-min warning) automatically for agent nodes. Controller nodes use on-demand — no spot interruption risk.</li>
+    <li>Node pool sizing: controllers pool caps at t3.large/t3.xlarge. If controller pods are Pending due to insufficient CPU/memory, check instance type limits in <code>nodepool-controllers.yaml</code>.</li>
+  </ul></div>
 </section>
 
 <!-- 5. OC -->
 <section class="lld-section" id="cbci-oc">
   <div class="sec-header"><div class="sec-num">5</div><div class="sec-title">Operations Center — Internals</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>OC runs as 1 replica</strong> with EFS RWO. Four containers: Jenkins JVM (main), casc-retriever (Quarkus sidecar), git-sync (sidecar), cleanup-stale-config (init). <code>numExecutors: 0</code> — OC is control plane only.</td></tr><tr><td>Alternatives</td><td>(a) OC HA (2 replicas) — not supported by CloudBees; OC is a singleton control plane. (b) No casc-retriever + manual ConfigMap mounts — requires <code>kubectl apply</code> per CasC change, not GitOps. (c) External git-sync only (no casc-retriever) — can't deliver OC bundle with version auto-stamping.</td></tr><tr><td>Rationale</td><td>The dual-sidecar pattern (casc-retriever for OC bundle, git-sync for controller bundles) is the CloudBees-recommended GitOps approach for OC 2.x. The init container cleans stale XML files from older CBCI plugin versions that cause <code>XStream CannotResolveClassException</code> and <code>MissingFieldException</code> on startup.</td></tr></table></div>
   <p class="prose">The OC pod runs <strong>4 containers</strong>: main Jenkins JVM, casc-retriever Quarkus sidecar, git-sync sidecar, and a one-shot cleanup init container. OC is the CBCI control plane — provisions managed controllers, distributes CasC bundles, and manages licenses. Backed by a single EFS Access Point (RWO — 1 replica).</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/helm/values-oc.yaml#L26-L31" target="_blank"><span class="cref-icon">📄</span>helm/values-oc.yaml:L26-L31 — JENKINS_ADMIN_PASSWORD injection</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/casc/oc-bundle/jenkins.yaml#L91-L110" target="_blank"><span class="cref-icon">📄</span>casc/oc-bundle/jenkins.yaml:L91-L110 — bundleUpdateTiming + bundleStorageService</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/scripts/bootstrap.sh#L113-L134" target="_blank"><span class="cref-icon">📄</span>scripts/bootstrap.sh:L113-L134 — casc-retriever StatefulSet env patch</a>
+  </div>
   <div class="dg"><div class="dg-label">Flowchart — OC Pod Container Layout</div>
   <div class="mermaid">
 flowchart TB
@@ -828,30 +1027,43 @@ flowchart TB
     <tr><td><code>allowAnonymousRead</code></td><td>true</td><td>Health-check endpoints respond without SAML auth</td></tr>
     <tr><td><code>numExecutors</code></td><td>0</td><td>OC runs no builds — control plane only</td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>OC startup sequence</strong>: init container runs → EFS mounts → casc-retriever clones repo → Jenkins JVM starts → CasC applies → controllers provisioned. Full cold-start takes 3–5 minutes.</li>
+    <li>If OC fails to start with <code>XStreamException</code> or <code>MissingFieldException</code>, the cleanup init container did not remove a stale XML. Add the filename to the init container args in <code>helm/values-oc.yaml</code>.</li>
+    <li><strong>OC EFS RWO</strong>: only one OC pod runs at a time. If OC pod is Pending and shows <code>Multi-Attach error</code>, the previous pod did not release the EFS mount. Force-delete the old pod: <code>kubectl delete pod cjoc-0 --force -n ci-controllers</code>.</li>
+    <li>Monitor OC health at <code>https://cjoc.myhomettbros.com/cjoc/login</code> — ALB health check confirms JVM is serving. Check bundleStorageService status in OC UI under Manage Jenkins → Bundle Storage Service.</li>
+  </ul></div>
 </section>
 
 <!-- 6. HA Controllers -->
 <section class="lld-section" id="ha-controllers">
   <div class="sec-header"><div class="sec-num">6</div><div class="sec-title">HA Managed Controllers</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>Active-active HA</strong>: 2 replicas per controller, cross-AZ pod anti-affinity, shared EFS Access Point (RWX), PodDisruptionBudget <code>minAvailable=1</code>, Hazelcast TCP gossip on port 5701 for JVM cluster membership.</td></tr><tr><td>Alternatives</td><td>(a) Active-passive (1 replica, manual failover) — no HA SLO; single pod failure = outage. (b) EBS RWO storage — no multi-attach; cannot support 2 replicas sharing JENKINS_HOME. (c) StatefulSet with 1 replica + fast restart — MTTR measured in minutes, not seconds.</td></tr><tr><td>Rationale</td><td>EFS RWX is the enabling primitive for CBCI active-active. Both replicas write to the same JENKINS_HOME — CBCI's internal locking handles concurrent writes. Hazelcast gossip uses K8s pod discovery (DNS) to form the cluster automatically. The PDB ensures rolling Karpenter node updates never leave the controller with 0 replicas.</td></tr></table></div>
   <p class="prose">Each managed controller runs as a <strong>StatefulSet with 2 replicas</strong> in active-active HA mode. Both replicas share one <strong>EFS Access Point</strong> (ReadWriteMany). A <strong>PodDisruptionBudget</strong> prevents simultaneous eviction. <strong>Pod anti-affinity</strong> spreads replicas across AZs so a single AZ failure does not take down a controller.</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/casc/oc-bundle/items.yaml#L26-L32" target="_blank"><span class="cref-icon">📄</span>casc/oc-bundle/items.yaml:L26-L32 — HA replicas + javaOptions</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/casc/oc-bundle/items.yaml#L37-L45" target="_blank"><span class="cref-icon">📄</span>casc/oc-bundle/items.yaml:L37-L45 — pod anti-affinity</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/pdb-controllers.yaml#L1-L21" target="_blank"><span class="cref-icon">📄</span>k8s/pdb-controllers.yaml:L1-L21 — PDB for both controllers</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/networkpolicy-ha-gossip.yaml#L1-L36" target="_blank"><span class="cref-icon">📄</span>k8s/networkpolicy-ha-gossip.yaml:L1-L36 — Hazelcast gossip NetworkPolicy</a>
+  </div>
   <div class="dg"><div class="dg-label">Flowchart — HA Controller Architecture</div>
   <div class="mermaid">
 flowchart LR
   OC["Operations Center\nprovisions + monitors"] --> MC0 & MC1
   subgraph AZ_A["AZ: us-east-1a"]
-    MC0["citest-1 replica-0\n(primary)\nt3.large · role=controller"]
+    MC0["controller-1 replica-0\n(primary)\nt3.large · role=controller"]
   end
   subgraph AZ_B["AZ: us-east-1b"]
-    MC1["citest-1 replica-1\n(hot standby)\nt3.large · role=controller"]
+    MC1["controller-1 replica-1\n(hot standby)\nt3.large · role=controller"]
   end
   MC0 <-->|Shared JENKINS_HOME\nReadWriteMany| AP
   MC1 <-->|Shared JENKINS_HOME\nReadWriteMany| AP
   subgraph EFS_BOX["Amazon EFS"]
-    AP["EFS Access Point\nsubPathPattern: /citest-1-pvc-{.name}\nuid/gid: 1000"]
+    AP["EFS Access Point\nsubPathPattern: /controller-1-pvc-{.name}\nuid/gid: 1000"]
   end
-  PDB["PodDisruptionBudget\nminAvailable: 1\nselector: com.cloudbees.cje.tenant=citest-1"]
-  ALB_R["ALB (controller ingress)\ncitest-1.myhomettbros.com\nsticky → active replica"]
+  PDB["PodDisruptionBudget\nminAvailable: 1\nselector: com.cloudbees.cje.tenant=controller-1"]
+  ALB_R["ALB (controller ingress)\ncontroller-1.myhomettbros.com\nsticky → active replica"]
   PDB -.->|protects| MC0 & MC1
   ALB_R --> MC0
   ALB_R -.->|failover| MC1
@@ -859,23 +1071,35 @@ flowchart LR
   style AZ_B fill:#0f2519,stroke:#238636,color:#c9d1d9
   style EFS_BOX fill:#1a1000,stroke:#d97706,color:#c9d1d9
   </div></div>
-  <div class="box green"><h4>PDB label selector</h4><p>CBCI auto-labels each controller pod <code>com.cloudbees.cje.tenant: citest-1</code>. The PDB uses <code>matchLabels: com.cloudbees.cje.tenant: citest-1</code> — same label as pod anti-affinity. Both features target the exact same pods with no manual label management needed.</p></div>
+  <div class="box green"><h4>PDB label selector</h4><p>CBCI auto-labels each controller pod <code>com.cloudbees.cje.tenant: controller-1</code>. The PDB uses <code>matchLabels: com.cloudbees.cje.tenant: controller-1</code> — same label as pod anti-affinity. Both features target the exact same pods with no manual label management needed.</p></div>
   <table class="dt">
-    <tr><th>Config</th><th>citest-1</th><th>citest2</th></tr>
+    <tr><th>Config</th><th>controller-1</th><th>controller-2</th></tr>
     <tr><td>Replicas</td><td>2</td><td>2</td></tr>
     <tr><td>PDB</td><td>minAvailable=1</td><td>minAvailable=1</td></tr>
     <tr><td>Anti-affinity key</td><td>topology.kubernetes.io/zone</td><td>topology.kubernetes.io/zone</td></tr>
-    <tr><td>EFS Access Point</td><td><code>/citest-1-pvc-*</code></td><td><code>/citest2-pvc-*</code></td></tr>
+    <tr><td>EFS Access Point</td><td><code>/controller-1-pvc-*</code></td><td><code>/controller-2-pvc-*</code></td></tr>
     <tr><td>Storage mode</td><td>ReadWriteMany (RWX)</td><td>ReadWriteMany (RWX)</td></tr>
-    <tr><td>Agent namespace</td><td><code>ci-agents-citest-1</code></td><td><code>ci-agents-citest2</code></td></tr>
+    <tr><td>Agent namespace</td><td><code>ci-agents-controller-1</code></td><td><code>ci-agents-controller-2</code></td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>Verify HA status</strong>: <code>kubectl get pods -n ci-controllers -l com.cloudbees.cje.tenant=controller-1</code> — should show 2 Running pods on different nodes.</li>
+    <li>Hazelcast gossip: confirm both replicas formed a 2-member cluster in controller logs — search for <code>Members [2]</code>. If only 1 member, check NetworkPolicy allows TCP 5701 between pods.</li>
+    <li><strong>Rolling update</strong>: StatefulSet rolling update respects PDB. If an update stalls, check <code>kubectl describe pdb -n ci-controllers</code> for <code>DisruptionsAllowed: 0</code>.</li>
+    <li>EFS RWX concurrent writes: CBCI uses file-level locking. If you observe <code>java.nio.channels.OverlappingFileLockException</code>, both replicas are up but EFS mount point is stale — restart the affected pod.</li>
+  </ul></div>
 </section>
 
 <!-- 7. Build Agents -->
 <section class="lld-section" id="build-agents">
   <div class="sec-header"><div class="sec-num">7</div><div class="sec-title">Build Agents — Ephemeral Pod Lifecycle</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>Ephemeral Kubernetes pods</strong> as build agents, isolated in per-controller namespaces (<code>ci-agents-controller-1</code>). Karpenter spot nodes with <code>workload=agents:NoSchedule</code> taint. Namespaces sync'd via GHA OIDC on <code>items.yaml</code> change.</td></tr><tr><td>Alternatives</td><td>(a) Static agent VMs — no elastic scaling; idle VMs waste cost. (b) Docker-in-Docker — security risk; DinD requires privileged pods. (c) Agents in the same namespace as controllers — no RBAC isolation; a runaway build could affect controller pods.</td></tr><tr><td>Rationale</td><td>Namespace isolation is the production security boundary. Each controller's agents are in their own namespace with their own ServiceAccount, ResourceQuota, and LimitRange. The <code>jenkins</code> ServiceAccount has only the permissions needed to create/delete pods — no cluster-wide access.</td></tr></table></div>
   <p class="prose">Agents are <strong>ephemeral Kubernetes pods</strong> — exist only for the duration of a build. Controller creates the pod, Karpenter provisions a spot EC2 node if needed, agent connects via JNLP, build runs, pod is deleted. Agent namespaces are <strong>isolated</strong> from the controller namespace — separate RBAC, ResourceQuota, LimitRange per controller.</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/scripts/sync-agent-namespaces.sh#L12-L20" target="_blank"><span class="cref-icon">📄</span>scripts/sync-agent-namespaces.sh:L12-L20 — YAML parsing (items.yaml → names)</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/scripts/sync-agent-namespaces.sh#L26-L60" target="_blank"><span class="cref-icon">📄</span>scripts/sync-agent-namespaces.sh:L26-L60 — namespace + RBAC creation</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/karpenter/nodepool-agents.yaml#L11-L15" target="_blank"><span class="cref-icon">📄</span>k8s/karpenter/nodepool-agents.yaml:L11-L15 — agents taint definition</a>
+  </div>
   <div class="dg"><div class="dg-label">Sequence — Agent Pod Lifecycle</div>
   <div class="mermaid">
 sequenceDiagram
@@ -888,7 +1112,7 @@ sequenceDiagram
 
   Dev->>MC: trigger pipeline build
   MC->>MC: evaluate kubernetes agent block
-  MC->>K8s: CREATE Pod in ci-agents-citest-1\ntoleration: workload=agents\nnodeSelector: role=agent
+  MC->>K8s: CREATE Pod in ci-agents-controller-1\ntoleration: workload=agents\nnodeSelector: role=agent
   K8s->>K8s: pod Pending — no matching node
   K8s->>KP: unschedulable pod event
   KP->>EC2: provision Spot instance (~30s)
@@ -908,47 +1132,57 @@ sequenceDiagram
     <tr><td>Agent image</td><td><code>jenkins/inbound-agent:3273.v4cfe...</code></td></tr>
     <tr><td>CPU req / limit</td><td>500m / 1 CPU</td></tr>
     <tr><td>Memory req / limit</td><td>512Mi / 1Gi</td></tr>
-    <tr><td>Namespace (citest-1)</td><td><code>ci-agents-citest-1</code></td></tr>
+    <tr><td>Namespace (controller-1)</td><td><code>ci-agents-controller-1</code></td></tr>
     <tr><td>ResourceQuota</td><td>16 CPU / 64Gi / 40 pods</td></tr>
     <tr><td>LimitRange default</td><td>500m CPU req</td></tr>
     <tr><td>Node taint</td><td><code>workload=agents:NoSchedule</code></td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>Namespace sync</strong>: when a new controller is added to <code>items.yaml</code>, the GHA <code>controller-namespace-sync</code> workflow creates the <code>ci-agents-&lt;name&gt;</code> namespace automatically on push to main. No manual kubectl needed.</li>
+    <li>If agents fail with <code>Unschedulable: 0/N nodes available</code>, check: (1) Karpenter agents NodePool not at instance limit, (2) agent pod has the correct toleration, (3) <code>role=agent</code> nodeSelector matches the NodePool label.</li>
+    <li><strong>ResourceQuota exhaustion</strong>: if builds queue but agents don't start and <code>kubectl describe resourcequota -n ci-agents-controller-1</code> shows limits hit, increase quota in <code>sync-agent-namespaces.sh</code> and re-run the workflow.</li>
+    <li>Agent pod images must be pinned. Use digest or specific version tags — never <code>:latest</code> in production pipelines.</li>
+  </ul></div>
 </section>
 
 <!-- 8. Storage -->
 <section class="lld-section" id="storage">
   <div class="sec-header"><div class="sec-num">8</div><div class="sec-title">Storage — Amazon EFS</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>Amazon EFS</strong> with one Access Point per controller. General Purpose performance mode, Elastic throughput, KMS encryption. StorageClass <code>efs-ap</code> with <code>subPathPattern: ${.PVC.name}</code>. <code>reclaimPolicy: Retain</code>.</td></tr><tr><td>Alternatives</td><td>(a) EBS gp3 — RWO only; blocks HA active-active (cannot share across nodes). (b) EFS without Access Points — all controllers share root; no isolation; UID/GID collision risk. (c) Bursting throughput mode — throughput tied to storage size; Jenkins I/O is spiky and benefits from Elastic auto-scaling.</td></tr><tr><td>Rationale</td><td><code>subPathPattern: ${.PVC.name}</code> creates a deterministic Access Point path from the PVC name — stable across pod restarts and predictable for disaster recovery. Retain reclaim policy means data survives accidental PVC deletion. Elastic throughput auto-scales with Jenkins build load without pre-provisioning.</td></tr></table></div>
   <p class="prose">All persistent Jenkins data lives on <strong>Amazon EFS</strong> — serverless, multi-AZ NFS. EFS is the only AWS storage that supports <strong>ReadWriteMany (RWX)</strong>, required for HA active-active controllers. One <strong>EFS Access Point</strong> per controller enforces isolated root directories and unix UID/GID.</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/k8s/storageclass-efs.yaml#L18" target="_blank"><span class="cref-icon">📄</span>k8s/storageclass-efs.yaml:L18 — subPathPattern Access Point naming</a>
+  </div>
   <div class="dg"><div class="dg-label">Flowchart — EFS Access Point per Controller</div>
   <div class="mermaid">
 flowchart TB
   subgraph EFS["Amazon EFS (Multi-AZ · KMS encrypted · Elastic throughput)"]
     ROOT["/  (filesystem root)"]
     AP_OC["/oc-home-pvc-xxx\nAccess Point: OC\nuid/gid 1000 · RWO"]
-    AP_C1["/citest-1-pvc-xxx\nAccess Point: citest-1\nuid/gid 1000 · RWX"]
-    AP_C2["/citest2-pvc-xxx\nAccess Point: citest2\nuid/gid 1000 · RWX"]
+    AP_C1["/controller-1-pvc-xxx\nAccess Point: controller-1\nuid/gid 1000 · RWX"]
+    AP_C2["/controller-2-pvc-xxx\nAccess Point: controller-2\nuid/gid 1000 · RWX"]
     ROOT --> AP_OC & AP_C1 & AP_C2
   end
   subgraph K8s["Kubernetes"]
     SC["StorageClass: efs-ap\nprovisioner: efs.csi.aws.com\nreclaimPolicy: Retain\nsubPathPattern: ${.PVC.name}"]
     PVC_OC["PVC: jenkins-home-cjoc-0\nRWO · 20Gi"]
-    PVC_C1["PVC: jenkins-home-citest-1-*\nRWX · 20Gi"]
-    PVC_C2["PVC: jenkins-home-citest2-*\nRWX · 20Gi"]
+    PVC_C1["PVC: jenkins-home-controller-1-*\nRWX · 20Gi"]
+    PVC_C2["PVC: jenkins-home-controller-2-*\nRWX · 20Gi"]
     SC --> PVC_OC & PVC_C1 & PVC_C2
   end
   PVC_OC <-->|EFS CSI driver| AP_OC
   PVC_C1 <-->|EFS CSI driver| AP_C1
   PVC_C2 <-->|EFS CSI driver| AP_C2
   OC["OC Pod (×1)"] --> PVC_OC
-  R0["citest-1 replica-0"] --> PVC_C1
-  R1["citest-1 replica-1"] --> PVC_C1
-  R2["citest2 replica-0"] --> PVC_C2
-  R3["citest2 replica-1"] --> PVC_C2
+  R0["controller-1 replica-0"] --> PVC_C1
+  R1["controller-1 replica-1"] --> PVC_C1
+  R2["controller-2 replica-0"] --> PVC_C2
+  R3["controller-2 replica-1"] --> PVC_C2
   style EFS fill:#1a1000,stroke:#d97706,color:#c9d1d9
   style K8s fill:#0d1f3c,stroke:#1f6feb,color:#c9d1d9
   </div></div>
-  <div class="box orange"><h4>subPathPattern — how Access Points get named</h4><p>StorageClass uses <code>subPathPattern: $&#123;.PVC.name&#125;</code>. When PVC <code>citest-1-jenkins-home-citest-1-0</code> is created, the CSI driver creates an EFS Access Point rooted at that path. The name is deterministic — stable across pod restarts, predictable for disaster recovery.</p></div>
+  <div class="box orange"><h4>subPathPattern — how Access Points get named</h4><p>StorageClass uses <code>subPathPattern: $&#123;.PVC.name&#125;</code>. When PVC <code>controller-1-jenkins-home-controller-1-0</code> is created, the CSI driver creates an EFS Access Point rooted at that path. The name is deterministic — stable across pod restarts, predictable for disaster recovery.</p></div>
   <table class="dt">
     <tr><th>Setting</th><th>Value</th><th>Reason</th></tr>
     <tr><td>Performance mode</td><td>General Purpose</td><td>Best for Jenkins (many small files)</td></tr>
@@ -958,13 +1192,25 @@ flowchart TB
     <tr><td>OC access mode</td><td>RWO</td><td>1 replica — RWO is sufficient</td></tr>
     <tr><td>Controller access mode</td><td>RWX</td><td>2 replicas share JENKINS_HOME</td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>PVC lifecycle</strong>: because <code>reclaimPolicy: Retain</code>, deleting a PVC does NOT delete the underlying EFS Access Point or data. The Access Point must be manually deleted in AWS console if you want to reclaim storage.</li>
+    <li>EFS throughput monitoring: check CloudWatch metric <code>StorageBytes</code> and <code>DataWriteIOBytes</code> for the EFS filesystem. If throughput consistently hits Elastic limits, consider enabling Provisioned throughput mode.</li>
+    <li><strong>Access Point UID/GID 1000</strong>: Jenkins runs as UID 1000 inside the container. The EFS Access Point enforces posixUser UID/GID 1000 — no permission issues on fresh PVC creation.</li>
+    <li>Disaster recovery: EFS Access Points can be restored from AWS Backup recovery points (see Section 11). The <code>subPathPattern</code> naming ensures the restored Access Point path matches the PVC name exactly.</li>
+  </ul></div>
 </section>
 
 <!-- 9. Secrets -->
 <section class="lld-section" id="secrets">
   <div class="sec-header"><div class="sec-num">9</div><div class="sec-title">Secrets Management</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>AWS Secrets Manager → K8s native Secrets via bootstrap.sh</strong>. No External Secrets Operator. Secrets are pulled once at cluster setup and live in K8s. Pod env vars reference K8s Secrets via <code>secretKeyRef</code>.</td></tr><tr><td>Alternatives</td><td>(a) External Secrets Operator (ESO) — syncs Secrets Manager → K8s continuously; adds complexity (CRDs, operator pods, IAM IRSA). Removed after evaluation: bootstrap pull is simpler for this scale. (b) Vault — significant operational overhead; not warranted for this deployment size. (c) Static secrets in Helm values — catastrophic; secrets in Git.</td></tr><tr><td>Rationale</td><td>Bootstrap pull is idempotent (<code>kubectl create secret --dry-run | kubectl apply</code>) and avoids a running controller needing continuous AWS access. The only runtime AWS access is the OC pod env var injection — handled at pod start. GHA OIDC is the only runtime AWS auth, scoped to <code>eks:DescribeCluster</code> only.</td></tr></table></div>
   <p class="prose">Secrets live in <strong>AWS Secrets Manager</strong>. They are pulled into Kubernetes as native <code>Secret</code> objects by <code>scripts/bootstrap.sh</code> at cluster setup. No secrets are in Git. The bootstrap script uses the AWS CLI + <code>kubectl apply --dry-run</code> pattern for idempotency.</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/scripts/bootstrap.sh#L61-L94" target="_blank"><span class="cref-icon">📄</span>scripts/bootstrap.sh:L61-L94 — secrets pull from Secrets Manager</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/scripts/bootstrap.sh#L100-L104" target="_blank"><span class="cref-icon">📄</span>scripts/bootstrap.sh:L100-L104 — helm install</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/helm/values-oc.yaml#L26-L31" target="_blank"><span class="cref-icon">📄</span>helm/values-oc.yaml:L26-L31 — JENKINS_ADMIN_PASSWORD secretKeyRef</a>
+  </div>
   <div class="dg"><div class="dg-label">Flowchart — Secrets Delivery</div>
   <div class="mermaid">
 flowchart LR
@@ -1000,13 +1246,27 @@ flowchart LR
     <tr><td><code>casc-retriever-cbci-creds</code></td><td>bootstrap.sh (manual)</td><td>casc-retriever env vars</td></tr>
     <tr><td><code>CBCI_GHA_ROLE_ARN</code></td><td>GitHub repo secret</td><td>GitHub Actions OIDC workflow</td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>Secret rotation</strong>: rotate <code>jenkins-admin-secret</code> in Secrets Manager, then run <code>scripts/bootstrap.sh</code> to update the K8s Secret, then restart the OC pod to pick up the new env var value.</li>
+    <li>Verify no secrets in Git: <code>git log --all --full-history -- '*.env' '*.secret'</code> should return nothing. Run <code>git secret scan</code> or truffleHog periodically.</li>
+    <li><strong>K8s Secret encryption at rest</strong>: EKS etcd encrypts K8s Secrets using AWS KMS by default (EKS encryption config). Verify with <code>aws eks describe-cluster --name cbci-platform --query 'cluster.encryptionConfig'</code>.</li>
+    <li>If the OC pod shows <code>JENKINS_ADMIN_PASSWORD: &lt;empty&gt;</code> in logs, the K8s Secret <code>jenkins-admin-secret</code> does not exist in namespace <code>ci-controllers</code> — re-run bootstrap.sh.</li>
+  </ul></div>
 </section>
 
 <!-- 10. GHA OIDC -->
 <section class="lld-section" id="github-actions">
   <div class="sec-header"><div class="sec-num">10</div><div class="sec-title">GitHub Actions — OIDC Keyless Auth</div></div>
   <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>GitHub Actions OIDC</strong>: GitHub mints JWT → <code>sts:AssumeRoleWithWebIdentity</code> → 15-min temp creds. IAM role <code>cbci-github-actions</code> restricted to <code>repo:Ramee09/cbci_on_aws:ref:refs/heads/main</code>. Permission: <code>eks:DescribeCluster</code> only.</td></tr><tr><td>Alternatives</td><td>(a) Long-lived IAM access keys in GitHub secrets — violates zero-trust; key rotation burden; exposed in secret scanning. (b) IAM roles for EC2 (self-hosted runners) — requires dedicated runner fleet, higher cost. (c) Restrict to branch AND workflow file — maximum security; not implemented yet (future hardening).</td></tr><tr><td>Rationale</td><td>OIDC keyless auth is the GitHub-recommended, AWS-recommended pattern for CI/CD. No static credentials means no rotation burden and no credential exfiltration risk. The trust condition sub-claim restricts to main branch pushes only — PRs from forks cannot assume the role.</td></tr></table></div>
   <p class="prose">GHA workflows authenticate to AWS via <strong>OIDC</strong> — no long-lived AWS keys in GitHub secrets. GitHub mints a short-lived JWT. AWS STS verifies it against the registered OIDC provider and returns 15-minute temp credentials. The IAM role trust policy restricts assumption to runs from <code>Ramee09/cbci_on_aws:refs/heads/main</code> only.</p>
+  <div class="crefsrow">
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/terraform/45-github-oidc/main.tf#L21-L28" target="_blank"><span class="cref-icon">📄</span>terraform/45-github-oidc/main.tf:L21-L28 — OIDC provider resource</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/terraform/45-github-oidc/main.tf#L31-L55" target="_blank"><span class="cref-icon">📄</span>terraform/45-github-oidc/main.tf:L31-L55 — IAM role + trust policy</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/terraform/45-github-oidc/main.tf#L58-L72" target="_blank"><span class="cref-icon">📄</span>terraform/45-github-oidc/main.tf:L58-L72 — IAM policy (eks:DescribeCluster only)</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/.github/workflows/controller-namespace-sync.yaml#L14-L16" target="_blank"><span class="cref-icon">📄</span>.github/workflows/controller-namespace-sync.yaml:L14-L16 — OIDC permissions</a>
+    <a class="cref" href="https://github.com/Ramee09/cbci_on_aws/blob/main/.github/workflows/controller-namespace-sync.yaml#L27-L31" target="_blank"><span class="cref-icon">📄</span>.github/workflows/controller-namespace-sync.yaml:L27-L31 — role-to-assume</a>
+  </div>
   <div class="dg"><div class="dg-label">Sequence — OIDC Auth Flow (keyless)</div>
   <div class="mermaid">
 sequenceDiagram
@@ -1054,6 +1314,57 @@ flowchart LR
     <tr><td>Credential lifetime</td><td>15 minutes</td></tr>
     <tr><td>Stored secrets in GitHub</td><td><code>CBCI_GHA_ROLE_ARN</code> only (an ARN, not a credential)</td></tr>
   </table>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>Workflow audit</strong>: IAM CloudTrail logs every <code>AssumeRoleWithWebIdentity</code> call. Monitor for unexpected role assumptions from non-main branches.</li>
+    <li>If a workflow fails with <code>Error assuming role</code>, check: (1) <code>CBCI_GHA_ROLE_ARN</code> secret is set in GitHub repo settings, (2) workflow <code>permissions: id-token: write</code> is present, (3) IAM trust condition matches the exact branch ref.</li>
+    <li><strong>Future hardening</strong>: restrict trust to specific workflow file SHA using <code>job_workflow_ref</code> condition in the IAM trust policy — prevents compromised workflow files from using the role.</li>
+    <li>The role grants <code>eks:DescribeCluster</code> only — enough for <code>aws eks update-kubeconfig</code>. Actual K8s permissions come from the <code>aws-auth</code> ConfigMap mapping (system:masters group for the GHA role).</li>
+  </ul></div>
+</section>
+
+<!-- 11. Backup & Restore -->
+<section class="lld-section" id="backup-restore">
+  <div class="sec-header"><div class="sec-num">11</div><div class="sec-title">Backup &amp; Restore</div></div>
+  <div class="divider"></div>
+  <div class="adr"><div class="adr-title">Architecture Decision Record</div><table><tr><td>Decision</td><td><strong>Two-layer backup</strong>: (1) <strong>AWS Backup</strong> for EFS filesystem data (JENKINS_HOME) — daily snapshots, 30-day retention. (2) <strong>Velero</strong> for Kubernetes resource snapshots (StatefulSets, PVCs, ConfigMaps, Secrets) — daily, stored in S3.</td></tr><tr><td>Alternatives</td><td>(a) EFS-only backup — covers data but not K8s resource definitions; full DR requires manual recreation of all K8s objects. (b) Velero only — backs up PVC metadata but not EFS data contents; restore creates empty volumes. (c) Manual snapshots — error-prone, not scheduled, operational toil.</td></tr><tr><td>Rationale</td><td>A DR event requires both: (1) the data (Jenkins jobs, build history, plugin configs — in EFS) and (2) the K8s objects (StatefulSets, PDBs, Ingresses — in Velero). Two layers provide independent recovery paths. AWS Backup is fully managed, integrates with KMS. Velero is the CNCF-standard K8s backup tool.</td></tr></table></div>
+  <p class="prose">Backup covers two independent layers: <strong>Amazon EFS</strong> (Jenkins home data) via AWS Backup, and <strong>Kubernetes resource state</strong> via Velero. Both layers must be restored together for a complete disaster recovery. RPO is 24 hours (daily backup schedule). RTO target is &lt; 1 hour for EFS restore + &lt; 15 minutes for K8s resource restore.</p>
+  <div class="dg"><div class="dg-label">Flowchart — Backup Architecture</div>
+  <div class="mermaid">
+flowchart LR
+  subgraph DataLayer["Data Layer — AWS Backup"]
+    EFS["Amazon EFS\nJENKINS_HOME\n(OC + controllers)"]
+    ABP["AWS Backup Plan\nDaily · 30-day retention\nKMS encrypted · cross-region copy"]
+    RP["Recovery Points\nus-east-1 + us-west-2"]
+    EFS -->|daily snapshot| ABP --> RP
+  end
+  subgraph K8sLayer["K8s Resource Layer — Velero"]
+    K8sRes["K8s Resources\nStatefulSets · PVCs\nConfigMaps · Secrets\nIngresses · PDBs"]
+    VEL["Velero (in-cluster)\nSchedule: daily 02:00 UTC"]
+    S3["S3 Bucket\ncbci-velero-backups\nServer-side encryption"]
+    K8sRes -->|backup| VEL --> S3
+  end
+  subgraph Restore["Restore Procedure"]
+    S3 -->|velero restore create| K8sRes2["K8s Resources restored"]
+    RP -->|AWS Backup restore| EFS2["EFS data restored"]
+  end
+  style DataLayer fill:#1a1000,stroke:#d97706,color:#c9d1d9
+  style K8sLayer fill:#0d1f3c,stroke:#1f6feb,color:#c9d1d9
+  style Restore fill:#0f2519,stroke:#238636,color:#c9d1d9
+  </div></div>
+  <table class="dt">
+    <tr><th>Layer</th><th>Tool</th><th>Schedule</th><th>Retention</th><th>Storage</th></tr>
+    <tr><td>EFS Data</td><td>AWS Backup</td><td>Daily 01:00 UTC</td><td>30 days (warm) + 90 days (cold)</td><td>AWS Backup vault (KMS)</td></tr>
+    <tr><td>K8s Resources</td><td>Velero</td><td>Daily 02:00 UTC</td><td>30 days</td><td>S3 (cbci-velero-backups)</td></tr>
+    <tr><td>Cross-region copy</td><td>AWS Backup</td><td>Same as EFS schedule</td><td>7 days</td><td>us-west-2 vault</td></tr>
+  </table>
+  <div class="box red"><h4>Restore Runbook — Full DR</h4><p><strong>Step 1 (K8s resources):</strong> <code>velero restore create --from-backup &lt;backup-name&gt; --include-namespaces ci-controllers,ci-agents-controller-1,ci-agents-controller-2</code><br><strong>Step 2 (EFS data):</strong> In AWS Backup console → Recovery Points → select latest → Restore → select target EFS filesystem → Restore to root.<br><strong>Step 3:</strong> Verify EFS Access Point paths match PVC names (<code>subPathPattern</code> naming).<br><strong>Step 4:</strong> Scale up OC StatefulSet: <code>kubectl scale statefulset/cjoc --replicas=1 -n ci-controllers</code><br><strong>Step 5:</strong> Verify at <code>/cjoc/login</code> and check controller provisioning status in OC UI.</p></div>
+  <div class="ops"><div class="ops-title">Operational Notes</div><ul>
+    <li><strong>Test restores quarterly</strong>: restore to a scratch namespace to verify backup integrity. An untested backup is not a backup.</li>
+    <li>Velero requires an S3 bucket and IAM role with S3 read/write. Use IRSA (IAM Roles for Service Accounts) — not static keys — for Velero's S3 access.</li>
+    <li><strong>EFS cross-region copy</strong>: enabled in AWS Backup plan for compliance. DR scenario: region-wide failure → restore EFS in us-west-2 + redeploy EKS cluster (Terraform) → point DNS to new cluster.</li>
+    <li>Before any planned maintenance window, trigger a manual Velero backup: <code>velero backup create pre-maintenance-$(date +%Y%m%d)</code>.</li>
+    <li>Monitor backup job status: AWS Backup → Jobs tab (EFS) and <code>velero backup get</code> (K8s). Set up CloudWatch alarms on AWS Backup job failures.</li>
+  </ul></div>
 </section>
 
 </main>
