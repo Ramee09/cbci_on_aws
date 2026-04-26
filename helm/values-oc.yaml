@@ -17,7 +17,7 @@ OperationsCenter:
       scmBundlePath: "casc/oc-bundle"
       scmPollingInterval: "PT1M"
       githubWebhooksEnabled: "false"
-      ocBundleAutomaticVersion: true
+      ocBundleAutomaticVersion: "true"
 
   # Protocol: https above makes the Helm template generate all com.cloudbees.networking.*
   # JVM properties correctly (protocol, hostname, port=443, useSubdomain).
