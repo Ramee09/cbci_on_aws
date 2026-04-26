@@ -323,7 +323,7 @@ svg a:hover .hov{opacity:1}
     <a href="#networking"><rect x="18" y="30" width="125" height="55" rx="8" fill="#161b22" stroke="#6e7681" stroke-width="1.5"/>
     <rect class="hov" x="18" y="30" width="125" height="55" rx="8"/>
     <text x="80" y="53" text-anchor="middle" font-size="18" fill="#8b949e">🌐</text>
-    <text x="80" y="74" text-anchor="middle" font-size="9.5" font-weight="600" fill="#8b949e">Internet Users</text>
+    <text x="80" y="74" text-anchor="middle" font-size="9.5" font-weight="600" fill="#8b949e">Mastercard Users</text>
     <title>→ Networking LLD</title></a>
 
     <!-- GitHub -->
@@ -635,13 +635,13 @@ svg a:hover .hov{opacity:1}
      E2E FLOW — NUMBERED STEPS
 ────────────────────────────────────────── -->
 <section class="page-section" id="e2e" style="padding-bottom:0">
-  <div class="sec-label">End-to-End Flow — "Developer pushes a CasC change to GitHub"</div>
+  <div class="sec-label">End-to-End Flow — "Engineer pushes a CasC change to GitHub"</div>
 </section>
 <div class="steps-grid">
 
   <a class="step" href="#gitops">
     <div class="sn">1</div>
-    <div class="sa">Developer</div>
+    <div class="sa">Platform Engineer</div>
     <div class="sd">Pushes a commit to <code>main</code> — e.g. edits <code>casc/oc-bundle/jenkins.yaml</code> or a controller bundle. Commit lands on GitHub.</div>
     <div class="sl">↓ GitOps LLD</div>
   </a>
@@ -731,7 +731,7 @@ svg a:hover .hov{opacity:1}
   <div class="dg"><div class="dg-label">Sequence — CasC Bundle Delivery</div>
   <div class="mermaid">
 sequenceDiagram
-  participant Dev as Developer
+  participant Dev as Platform Engineer
   participant GH as GitHub (main)
   participant CR as casc-retriever
   participant GS as git-sync sidecar
@@ -819,7 +819,7 @@ flowchart TB
     <tr><th>Setting</th><th>Value</th><th>Reason</th></tr>
     <tr><td>VPC CIDR</td><td><code>10.0.0.0/16</code></td><td>Standard 3-AZ layout</td></tr>
     <tr><td>NAT Gateway</td><td>Single (us-east-1a)</td><td>Consolidated outbound — AZ failure is accepted risk for egress only; inbound HA is handled by ALB</td></tr>
-    <tr><td>ALB scheme</td><td>internet-facing</td><td>Accessible from developer laptops</td></tr>
+    <tr><td>ALB scheme</td><td>internet-facing</td><td>Accessible to authenticated Mastercard users</td></tr>
     <tr><td>TLS</td><td>ACM (DNS-validated, auto-renew)</td><td>Free cert, no rotation needed</td></tr>
     <tr><td>Sticky sessions</td><td>lb_cookie · 86400s</td><td>SAML in-memory state per pod</td></tr>
     <tr><td>ALB group</td><td><code>cbci-oc</code></td><td>OC + all controller ingresses share one ALB</td></tr>
@@ -1065,7 +1065,7 @@ flowchart LR
   <div class="dg"><div class="dg-label">Sequence — Agent Pod Lifecycle</div>
   <div class="mermaid">
 sequenceDiagram
-  participant Dev as Developer
+  participant Dev as Platform Engineer
   participant MC as Managed Controller
   participant K8s as Kubernetes API
   participant KP as Karpenter
