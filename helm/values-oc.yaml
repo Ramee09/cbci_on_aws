@@ -18,6 +18,11 @@ OperationsCenter:
       scmPollingInterval: "PT1M"
       githubWebhooksEnabled: "true"
       ocBundleAutomaticVersion: "true"
+      secrets:
+        # HMAC secret for GitHub webhook signature validation (X-Hub-Signature-256).
+        # K8s secret 'github-webhook-secret' is created by bootstrap.sh from
+        # AWS Secrets Manager cbci-lab/github-webhook-secret.
+        githubWebhookSecret: github-webhook-secret
 
   # Protocol: https above makes the Helm template generate all com.cloudbees.networking.*
   # JVM properties correctly (protocol, hostname, port=443, useSubdomain).

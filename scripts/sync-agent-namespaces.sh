@@ -9,7 +9,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ITEMS_YAML="$REPO_ROOT/casc/oc-bundle/items.yaml"
 CONTROLLER_NS="ci-controllers"
 
-controller_names=$(python3 - <<'EOF'
+controller_names=$(python3 - "$ITEMS_YAML" <<'EOF'
 import yaml, sys
 with open(sys.argv[1]) as f:
     doc = yaml.safe_load(f)
@@ -17,7 +17,7 @@ for item in doc.get("items", []):
     if item.get("kind") == "managedController":
         print(item["name"])
 EOF
-"$ITEMS_YAML")
+)
 
 for name in $controller_names; do
   agent_ns="ci-agents-${name}"

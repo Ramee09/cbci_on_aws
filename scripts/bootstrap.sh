@@ -45,12 +45,11 @@ echo "=== 2. Namespaces ==="
 kubectl apply -f k8s/namespaces.yaml
 
 echo ""
-echo "=== 3. Agent namespaces ==="
-# Agent namespaces must exist before controllers can schedule build pods.
-# CBCI sets up the RBAC inside these namespaces automatically on first controller boot.
-kubectl create namespace ci-agents-citest-1 --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace ci-agents-citest2  --dry-run=client -o yaml | kubectl apply -f -
-echo "  Agent namespaces ready."
+echo "=== 3. Agent namespaces + RBAC + ResourceQuota ==="
+# Creates/updates ci-agents-<controller> namespaces with RBAC, ResourceQuota (16 CPU /
+# 64Gi / 40 pods) and LimitRange. Derives controller names from items.yaml — adding a
+# new controller to items.yaml and re-running bootstrap is all that's needed.
+bash "$(dirname "$0")/sync-agent-namespaces.sh"
 
 echo ""
 echo "=== 4. StorageClass (EFS) ==="
@@ -81,6 +80,18 @@ kubectl create secret generic casc-retriever-cbci-creds \
   --namespace "${CBCI_NAMESPACE}" \
   --dry-run=client -o yaml | kubectl apply -f -
 echo "  casc-retriever-cbci-creds created."
+
+# GitHub webhook HMAC secret — validates X-Hub-Signature-256 on every push event
+# so only authentic GitHub requests trigger a CasC reload (prevents spoofed webhooks).
+WEBHOOK_SECRET=$(aws secretsmanager get-secret-value \
+  --secret-id cbci-lab/github-webhook-secret \
+  --query SecretString --output text \
+  --region "${REGION}" | jq -r .secret)
+kubectl create secret generic github-webhook-secret \
+  --from-literal=secret="${WEBHOOK_SECRET}" \
+  --namespace "${CBCI_NAMESPACE}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+echo "  github-webhook-secret created."
 
 echo ""
 echo "=== 6. CloudBees CI — Operations Center ==="

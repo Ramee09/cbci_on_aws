@@ -3,7 +3,10 @@ jenkins:
   numExecutors: 0
   authorizationStrategy:
     loggedInUsersCanDoAnything:
-      allowAnonymousRead: false
+      # true required so the casc-retriever webhook endpoint (UnprotectedRootAction)
+      # is reachable by GitHub without authentication. Logged-in users still require
+      # SAML; anonymous users can only read — no build/configure/admin access.
+      allowAnonymousRead: true
   securityRealm:
     saml:
       advancedConfiguration:
