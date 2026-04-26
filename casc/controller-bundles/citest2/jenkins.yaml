@@ -1,9 +1,9 @@
 jenkins:
-  systemMessage: "Controller-1 — managed by CloudBees CI CasC"
+  systemMessage: "CITEST2 — managed by CloudBees CI CasC (GitOps)"
 
 unclassified:
   location:
-    url: "https://cjoc.myhomettbros.com/controller-1/"
+    url: "https://cjoc.myhomettbros.com/citest2/"
     adminAddress: ""
 
 credentials:
@@ -15,7 +15,6 @@ credentials:
               id: "github-token"
               description: "GitHub PAT — injected from K8s secret cbci-lab/github-token"
               secret: "${GITHUB_TOKEN}"
-
           - usernamePassword:
               scope: GLOBAL
               id: "docker-registry"

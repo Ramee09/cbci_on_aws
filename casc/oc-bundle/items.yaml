@@ -9,15 +9,15 @@ items:
     description: "Platform team folder"
 
   - kind: managedController
-    name: controller1
-    displayName: "Controller1"
+    name: citest-1
+    displayName: "CITEST-1"
     approved: true
     configuration:
       kubernetes:
         disk: 20
         memory: 2048
         cpus: 1.0
-        domain: controller1
+        domain: citest-1
         allowExternalAgents: false
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
@@ -26,24 +26,24 @@ items:
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=ci-controllers
           -Djenkins.install.runSetupWizard=false
-          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-controller1
+          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-citest-1
         replication:
           config:
             replicas: 2
     properties:
       - configurationAsCode:
-          bundle: "controller-bundles/controller1"
+          bundle: "controller-bundles/citest-1"
 
   - kind: managedController
-    name: controller-1
-    displayName: "Controller-1"
+    name: citest2
+    displayName: "CITEST2"
     approved: true
     configuration:
       kubernetes:
         disk: 20
         memory: 2048
         cpus: 1.0
-        domain: controller-1
+        domain: citest2
         allowExternalAgents: false
         nodeSelectors: "role=controller"
         storageClassName: efs-ap
@@ -52,10 +52,10 @@ items:
           -Dcom.cloudbees.ha=true
           -Dhazelcast.kubernetes.namespace=ci-controllers
           -Djenkins.install.runSetupWizard=false
-          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-controller-1
+          -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-citest2
         replication:
           config:
             replicas: 2
     properties:
       - configurationAsCode:
-          bundle: "controller-bundles/controller-1"
+          bundle: "controller-bundles/citest2"

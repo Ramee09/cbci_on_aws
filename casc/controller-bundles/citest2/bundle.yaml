@@ -1,9 +1,9 @@
-id: "controller1"
-version: "11"
+id: "citest2"
+version: "1"
 apiVersion: 2
 availabilityPattern: ".*"
 parent: "controller-bundles/base-bundle"
-description: "Controller1 — inherits base-bundle; adds its own folders and credentials"
+description: "CITEST2 — inherits base-bundle; adds its own folders and credentials"
 jcasc:
   - "jenkins.yaml"
 items:

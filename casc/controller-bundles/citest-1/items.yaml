@@ -34,3 +34,28 @@ items:
     name: "admin"
     displayName: "Admin"
     description: "Platform maintenance jobs"
+    items:
+      - kind: pipeline
+        name: "casc-status"
+        displayName: "CasC Bundle Status"
+        description: "Prints the active CasC bundle version on this controller"
+        definition:
+          cpsFlowDefinition:
+            script: |
+              pipeline {
+                agent none
+                stages {
+                  stage('Status') {
+                    steps {
+                      script {
+                        def status = httpRequest(
+                          url: "${env.JENKINS_URL}core-casc-export/api/json",
+                          authentication: 'N/A'
+                        )
+                        echo status.content
+                      }
+                    }
+                  }
+                }
+              }
+            sandbox: true

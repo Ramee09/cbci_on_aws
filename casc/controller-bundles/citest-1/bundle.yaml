@@ -1,0 +1,10 @@
+id: "citest-1"
+version: "1"
+apiVersion: 2
+availabilityPattern: ".*"
+parent: "controller-bundles/base-bundle"
+description: "CITEST-1 — inherits base-bundle; adds its own folders and credentials"
+jcasc:
+  - "jenkins.yaml"
+items:
+  - "items.yaml"
