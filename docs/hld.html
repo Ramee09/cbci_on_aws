@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBCI on AWS — High Level Design</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d1117; color: #e6edf3; }
+
+.header {
+  background: linear-gradient(135deg, #0d1117 0%, #1a1a2e 60%, #1e0a3c 100%);
+  padding: 44px 60px 32px;
+  border-bottom: 1px solid #21262d;
+}
+.header h1 { font-size: 1.9rem; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+.header p { color: #8b949e; margin-top: 8px; font-size: 0.92rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.chip {
+  background: rgba(255,255,255,0.05); border: 1px solid #30363d;
+  padding: 4px 14px; border-radius: 20px;
+  font-size: 0.76rem; color: #8b949e;
+}
+.chip strong { color: #e6edf3; }
+
+.wrap { max-width: 1360px; margin: 0 auto; padding: 32px 20px; }
+
+.section-label {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: #8b949e; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-label::after { content:''; flex:1; height:1px; background:#21262d; }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  background: #161b22; border: 1px solid #21262d;
+  border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;
+}
+.li { display: flex; align-items: center; gap: 7px; font-size: 0.78rem; color: #8b949e; }
+.sw { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
+
+/* SVG hover interactivity */
+svg a { cursor: pointer; }
+svg a:hover .hov { opacity: 1; }
+.hov { fill: rgba(255,255,255,0.07); opacity: 0; transition: opacity 0.18s; pointer-events: none; }
+svg a:hover text { fill: #fff !important; }
+
+/* Flow steps */
+.flow-wrap { max-width: 1360px; margin: 0 auto; padding: 0 20px 60px; }
+.flow-h { font-size: 1.1rem; font-weight: 700; color: #e6edf3; margin-bottom: 20px;
+           padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+.steps { display: flex; flex-direction: column; gap: 10px; }
+.step {
+  display: grid; grid-template-columns: 42px 180px 1fr 90px;
+  gap: 14px; align-items: start;
+  background: #161b22; border: 1px solid #21262d;
+  border-radius: 10px; padding: 14px 18px;
+  text-decoration: none; color: inherit;
+  transition: border-color 0.18s, transform 0.18s;
+}
+.step:hover { border-color: #388bfd; transform: translateX(3px); }
+.sn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: #1f6feb; color: #fff; font-weight: 700; font-size: 0.82rem;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sa { font-size: 0.78rem; font-weight: 700; color: #58a6ff; padding-top: 2px; }
+.sd { font-size: 0.84rem; color: #c9d1d9; line-height: 1.5; }
+.sd code { background: #21262d; padding: 1px 5px; border-radius: 3px; font-size: 0.8rem; color: #79c0ff; }
+.sl { font-size: 0.72rem; color: #3fb950; font-weight: 600; white-space: nowrap; padding-top: 2px; }
+
+.btn-lld {
+  display: inline-block; margin-top: 24px;
+  background: #1f6feb; color: #fff; padding: 10px 22px;
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  text-decoration: none; transition: background 0.18s;
+}
+.btn-lld:hover { background: #388bfd; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>CBCI on AWS — High Level Design</h1>
+  <p>CloudBees CI (Modern) on Amazon EKS · Personal learning lab mirroring Mastercard production</p>
+  <div class="chips">
+    <div class="chip"><strong>Region:</strong> us-east-1</div>
+    <div class="chip"><strong>EKS:</strong> 1.31</div>
+    <div class="chip"><strong>CBCI:</strong> 2.555.x</div>
+    <div class="chip"><strong>Node strategy:</strong> Managed MNG + Karpenter</div>
+    <div class="chip"><strong>Auth:</strong> Entra ID SAML 2.0</div>
+    <div class="chip"><strong>Storage:</strong> Amazon EFS (RWX)</div>
+    <div class="chip"><strong>GitOps:</strong> casc-retriever + git-sync</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="section-label">Architecture Diagram — click any component to open its Low Level Design</div>
+
+  <div class="legend">
+    <div class="li"><div class="sw" style="background:#1f6feb"></div>AWS Networking / Edge</div>
+    <div class="li"><div class="sw" style="background:#238636"></div>CBCI / Jenkins</div>
+    <div class="li"><div class="sw" style="background:#d97706"></div>Storage (EFS)</div>
+    <div class="li"><div class="sw" style="background:#7c3aed"></div>Identity / SSO</div>
+    <div class="li"><div class="sw" style="background:#b08800"></div>GitHub / GitOps</div>
+    <div class="li"><div class="sw" style="background:#dc2626"></div>Secrets</div>
+    <div class="li"><div class="sw" style="background:#6e7681"></div>External</div>
+  </div>
+
+  <svg viewBox="0 0 1300 840" xmlns="http://www.w3.org/2000/svg"
+       style="width:100%;border-radius:12px;background:#0d1117;border:1px solid #21262d;">
+    <defs>
+      <marker id="ab" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#58a6ff"/></marker>
+      <marker id="ag" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#3fb950"/></marker>
+      <marker id="ap" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#bc8cff"/></marker>
+      <marker id="ao" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#e3b341"/></marker>
+      <marker id="ar" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#f87171"/></marker>
+      <marker id="ax" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#6e7681"/></marker>
+    </defs>
+
+    <!-- ── AWS boundary ── -->
+    <rect x="8" y="8" width="1284" height="824" rx="14" fill="none" stroke="#21262d" stroke-width="1.5"/>
+    <text x="24" y="26" font-size="9" fill="#30363d" font-weight="700" letter-spacing="1">AWS ACCOUNT: 835090871306 · us-east-1</text>
+
+    <!-- ════════════════════════════════════════════
+         ROW 1 — External Systems (y=35)
+    ════════════════════════════════════════════ -->
+
+    <!-- Internet Users -->
+    <a href="lld.html#networking">
+      <rect x="20" y="35" width="130" height="58" rx="8" fill="#161b22" stroke="#6e7681" stroke-width="1.5"/>
+      <rect class="hov" x="20" y="35" width="130" height="58" rx="8"/>
+      <text x="85" y="59" text-anchor="middle" font-size="20" fill="#8b949e">🌐</text>
+      <text x="85" y="79" text-anchor="middle" font-size="10" font-weight="600" fill="#8b949e">Internet Users</text>
+      <title>Click → Networking LLD</title>
+    </a>
+
+    <!-- GitHub Repo -->
+    <a href="lld.html#gitops">
+      <rect x="430" y="35" width="170" height="58" rx="8" fill="#161b22" stroke="#e3b341" stroke-width="1.5"/>
+      <rect class="hov" x="430" y="35" width="170" height="58" rx="8"/>
+      <text x="515" y="59" text-anchor="middle" font-size="18">🐙</text>
+      <text x="515" y="79" text-anchor="middle" font-size="10" font-weight="600" fill="#e3b341">GitHub (cbci_on_aws)</text>
+      <title>Click → GitOps LLD</title>
+    </a>
+
+    <!-- GitHub Actions -->
+    <a href="lld.html#github-actions">
+      <rect x="650" y="35" width="175" height="58" rx="8" fill="#161b22" stroke="#e3b341" stroke-width="1.5"/>
+      <rect class="hov" x="650" y="35" width="175" height="58" rx="8"/>
+      <text x="737" y="59" text-anchor="middle" font-size="18">⚡</text>
+      <text x="737" y="79" text-anchor="middle" font-size="10" font-weight="600" fill="#e3b341">GitHub Actions (OIDC)</text>
+      <title>Click → GitHub Actions LLD</title>
+    </a>
+
+    <!-- Entra ID -->
+    <a href="lld.html#identity">
+      <rect x="1080" y="35" width="165" height="58" rx="8" fill="#1e0a3c" stroke="#bc8cff" stroke-width="1.5"/>
+      <rect class="hov" x="1080" y="35" width="165" height="58" rx="8"/>
+      <text x="1162" y="59" text-anchor="middle" font-size="18">🔐</text>
+      <text x="1162" y="79" text-anchor="middle" font-size="10" font-weight="600" fill="#bc8cff">Entra ID (SAML 2.0)</text>
+      <title>Click → Identity LLD</title>
+    </a>
+
+    <!-- ════════════════════════════════════════════
+         ROW 2 — AWS Edge (y=130)
+    ════════════════════════════════════════════ -->
+
+    <!-- Route 53 -->
+    <a href="lld.html#networking">
+      <rect x="20" y="130" width="110" height="48" rx="8" fill="#1a1400" stroke="#e3b341" stroke-width="1.5"/>
+      <rect class="hov" x="20" y="130" width="110" height="48" rx="8"/>
+      <text x="75" y="150" text-anchor="middle" font-size="13">🔀</text>
+      <text x="75" y="168" text-anchor="middle" font-size="9.5" font-weight="600" fill="#e3b341">Route 53</text>
+      <title>Click → Networking LLD</title>
+    </a>
+
+    <!-- ACM -->
+    <a href="lld.html#networking">
+      <rect x="142" y="130" width="90" height="48" rx="8" fill="#1a1400" stroke="#e3b341" stroke-width="1.5"/>
+      <rect class="hov" x="142" y="130" width="90" height="48" rx="8"/>
+      <text x="187" y="150" text-anchor="middle" font-size="13">🔒</text>
+      <text x="187" y="168" text-anchor="middle" font-size="9.5" font-weight="600" fill="#e3b341">ACM TLS</text>
+      <title>Click → Networking LLD</title>
+    </a>
+
+    <!-- ALB -->
+    <a href="lld.html#networking">
+      <rect x="20" y="198" width="230" height="50" rx="8" fill="#0d1f3c" stroke="#58a6ff" stroke-width="2"/>
+      <rect class="hov" x="20" y="198" width="230" height="50" rx="8"/>
+      <text x="135" y="220" text-anchor="middle" font-size="13">⚖️</text>
+      <text x="135" y="238" text-anchor="middle" font-size="10" font-weight="700" fill="#58a6ff">AWS Application Load Balancer</text>
+      <title>Click → Networking LLD</title>
+    </a>
+
+    <!-- AWS STS -->
+    <a href="lld.html#github-actions">
+      <rect x="860" y="130" width="135" height="48" rx="8" fill="#1a1400" stroke="#e3b341" stroke-width="1.5"/>
+      <rect class="hov" x="860" y="130" width="135" height="48" rx="8"/>
+      <text x="927" y="150" text-anchor="middle" font-size="13">🎫</text>
+      <text x="927" y="168" text-anchor="middle" font-size="9.5" font-weight="600" fill="#e3b341">AWS STS (OIDC)</text>
+      <title>Click → GitHub Actions LLD</title>
+    </a>
+
+    <!-- SSO Relay -->
+    <a href="lld.html#identity">
+      <rect x="930" y="198" width="165" height="50" rx="8" fill="#1e0a3c" stroke="#bc8cff" stroke-width="1.5"/>
+      <rect class="hov" x="930" y="198" width="165" height="50" rx="8"/>
+      <text x="1012" y="220" text-anchor="middle" font-size="13">🔄</text>
+      <text x="1012" y="238" text-anchor="middle" font-size="10" font-weight="600" fill="#bc8cff">SSO Relay (Quarkus)</text>
+      <title>Click → Identity LLD</title>
+    </a>
+
+    <!-- ════════════════════════════════════════════
+         EKS CLUSTER BOX
+    ════════════════════════════════════════════ -->
+    <rect x="14" y="272" width="890" height="552" rx="12"
+          fill="#0a1628" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="8,4"/>
+    <text x="28" y="291" font-size="9.5" font-weight="700" fill="#388bfd" letter-spacing="1">
+      EKS CLUSTER — cbci-lab  ·  Kubernetes 1.31  ·  us-east-1  (3 AZs)
+    </text>
+
+    <!-- ci-controllers namespace -->
+    <rect x="24" y="300" width="870" height="295" rx="8"
+          fill="rgba(35,134,54,0.04)" stroke="#238636" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="36" y="318" font-size="9" fill="#3fb950" font-weight="700" letter-spacing="0.8">
+      NAMESPACE: ci-controllers
+    </text>
+
+    <!-- Operations Center -->
+    <a href="lld.html#cbci-oc">
+      <rect x="36" y="326" width="238" height="155" rx="8" fill="#0f2519" stroke="#238636" stroke-width="2"/>
+      <rect class="hov" x="36" y="326" width="238" height="155" rx="8"/>
+      <rect x="36" y="326" width="238" height="26" rx="8" fill="#238636"/>
+      <rect x="36" y="341" width="238" height="11" fill="#238636"/>
+      <text x="155" y="344" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Operations Center</text>
+      <!-- sub-components -->
+      <rect x="48" y="363" width="100" height="30" rx="4" fill="#1a3a1a" stroke="#3fb950" stroke-width="1"/>
+      <text x="98" y="375" text-anchor="middle" font-size="8.5" fill="#3fb950" font-weight="600">casc-retriever</text>
+      <text x="98" y="386" text-anchor="middle" font-size="7.5" fill="#6e7681">polls GitHub 1min</text>
+
+      <rect x="160" y="363" width="100" height="30" rx="4" fill="#1a3a1a" stroke="#3fb950" stroke-width="1"/>
+      <text x="210" y="375" text-anchor="middle" font-size="8.5" fill="#3fb950" font-weight="600">git-sync sidecar</text>
+      <text x="210" y="386" text-anchor="middle" font-size="7.5" fill="#6e7681">ctrl bundles 60s</text>
+
+      <rect x="48" y="402" width="212" height="30" rx="4" fill="#1a3a1a" stroke="#3fb950" stroke-width="1"/>
+      <text x="154" y="414" text-anchor="middle" font-size="8.5" fill="#3fb950" font-weight="600">bundleStorageService</text>
+      <text x="154" y="425" text-anchor="middle" font-size="7.5" fill="#6e7681">push bundles to controllers (120s)</text>
+
+      <rect x="48" y="440" width="212" height="28" rx="4" fill="#1a3a1a" stroke="#30363d" stroke-width="1"/>
+      <text x="154" y="452" text-anchor="middle" font-size="8" fill="#8b949e">cleanup-stale-config init container</text>
+      <text x="154" y="463" text-anchor="middle" font-size="7.5" fill="#6e7681">EFS-backed (RWO) · 1 replica</text>
+      <title>Click → Operations Center LLD</title>
+    </a>
+
+    <!-- citest-1 -->
+    <a href="lld.html#ha-controllers">
+      <rect x="292" y="326" width="200" height="120" rx="8" fill="#0f2519" stroke="#238636" stroke-width="2"/>
+      <rect class="hov" x="292" y="326" width="200" height="120" rx="8"/>
+      <rect x="292" y="326" width="200" height="26" rx="8" fill="#238636"/>
+      <rect x="292" y="341" width="200" height="11" fill="#238636"/>
+      <text x="392" y="344" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">citest-1  (HA)</text>
+      <text x="392" y="372" text-anchor="middle" font-size="9" fill="#3fb950">2 replicas · PDB minAvailable=1</text>
+      <text x="392" y="388" text-anchor="middle" font-size="8.5" fill="#6e7681">Pod anti-affinity → spread AZs</text>
+      <text x="392" y="403" text-anchor="middle" font-size="8.5" fill="#6e7681">EFS Access Point (RWX)</text>
+      <text x="392" y="418" text-anchor="middle" font-size="8" fill="#8b949e">label: com.cloudbees.cje.tenant=citest-1</text>
+      <text x="392" y="436" text-anchor="middle" font-size="7.5" fill="#6e7681">on-demand · t3.large · role=controller</text>
+      <title>Click → HA Controllers LLD</title>
+    </a>
+
+    <!-- citest2 -->
+    <a href="lld.html#ha-controllers">
+      <rect x="292" y="460" width="200" height="120" rx="8" fill="#0f2519" stroke="#238636" stroke-width="2"/>
+      <rect class="hov" x="292" y="460" width="200" height="120" rx="8"/>
+      <rect x="292" y="460" width="200" height="26" rx="8" fill="#238636"/>
+      <rect x="292" y="475" width="200" height="11" fill="#238636"/>
+      <text x="392" y="478" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">citest2  (HA)</text>
+      <text x="392" y="506" text-anchor="middle" font-size="9" fill="#3fb950">2 replicas · PDB minAvailable=1</text>
+      <text x="392" y="522" text-anchor="middle" font-size="8.5" fill="#6e7681">Pod anti-affinity → spread AZs</text>
+      <text x="392" y="537" text-anchor="middle" font-size="8.5" fill="#6e7681">EFS Access Point (RWX)</text>
+      <text x="392" y="552" text-anchor="middle" font-size="8" fill="#8b949e">label: com.cloudbees.cje.tenant=citest2</text>
+      <text x="392" y="567" text-anchor="middle" font-size="7.5" fill="#6e7681">on-demand · t3.large · role=controller</text>
+      <title>Click → HA Controllers LLD</title>
+    </a>
+
+    <!-- Karpenter controllers nodepool -->
+    <a href="lld.html#eks">
+      <rect x="508" y="316" width="362" height="268" rx="8"
+            fill="rgba(31,111,235,0.05)" stroke="#1f6feb" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect class="hov" x="508" y="316" width="362" height="268" rx="8"/>
+      <text x="522" y="333" font-size="8.5" fill="#388bfd" font-weight="700" letter-spacing="0.6">KARPENTER NodePool: controllers (on-demand)</text>
+
+      <rect x="522" y="342" width="155" height="80" rx="6" fill="#0d1f3c" stroke="#1f6feb" stroke-width="1"/>
+      <text x="599" y="362" text-anchor="middle" font-size="9.5" fill="#58a6ff" font-weight="600">Node: t3.large</text>
+      <text x="599" y="378" text-anchor="middle" font-size="8" fill="#6e7681">AZ: us-east-1a</text>
+      <text x="599" y="393" text-anchor="middle" font-size="8" fill="#6e7681">citest-1 replica-0</text>
+      <text x="599" y="408" text-anchor="middle" font-size="7.5" fill="#8b949e">role=controller</text>
+
+      <rect x="692" y="342" width="155" height="80" rx="6" fill="#0d1f3c" stroke="#1f6feb" stroke-width="1"/>
+      <text x="769" y="362" text-anchor="middle" font-size="9.5" fill="#58a6ff" font-weight="600">Node: t3.large</text>
+      <text x="769" y="378" text-anchor="middle" font-size="8" fill="#6e7681">AZ: us-east-1b</text>
+      <text x="769" y="393" text-anchor="middle" font-size="8" fill="#6e7681">citest-1 replica-1</text>
+      <text x="769" y="408" text-anchor="middle" font-size="7.5" fill="#8b949e">role=controller</text>
+
+      <rect x="522" y="436" width="325" height="130" rx="6" fill="#0d1f3c" stroke="#1f6feb" stroke-width="1"/>
+      <text x="684" y="456" text-anchor="middle" font-size="9.5" fill="#58a6ff" font-weight="600">System MNG Node (t3.xlarge)</text>
+      <text x="684" y="472" text-anchor="middle" font-size="8" fill="#6e7681">OC pod  ·  SSO Relay pods  ·  kube-system</text>
+      <text x="684" y="488" text-anchor="middle" font-size="8" fill="#6e7681">AWS Load Balancer Controller  ·  ExternalDNS</text>
+      <text x="684" y="504" text-anchor="middle" font-size="8" fill="#6e7681">EFS CSI driver  ·  Karpenter controller</text>
+      <text x="684" y="520" text-anchor="middle" font-size="7.5" fill="#8b949e">managed node group · on-demand · always running</text>
+      <text x="684" y="554" text-anchor="middle" font-size="7.5" fill="#6e7681">citest2 replicas also here (2nd AZ pair)</text>
+      <title>Click → EKS Node Pools LLD</title>
+    </a>
+
+    <!-- ci-agents namespace -->
+    <rect x="24" y="608" width="870" height="200" rx="8"
+          fill="rgba(217,119,6,0.04)" stroke="#d97706" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="36" y="626" font-size="9" fill="#d97706" font-weight="700" letter-spacing="0.8">
+      NAMESPACES: ci-agents-citest-1  ·  ci-agents-citest2   (Karpenter NodePool: agents · spot)
+    </text>
+
+    <!-- Agent pods -->
+    <a href="lld.html#build-agents">
+      <rect x="36" y="634" width="98" height="62" rx="6" fill="#1c1100" stroke="#d97706" stroke-width="1.5"/>
+      <rect class="hov" x="36" y="634" width="98" height="62" rx="6"/>
+      <text x="85" y="657" text-anchor="middle" font-size="9" fill="#d97706" font-weight="600">agent-pod-1</text>
+      <text x="85" y="671" text-anchor="middle" font-size="7.5" fill="#6e7681">jnlp · inbound-agent</text>
+      <text x="85" y="685" text-anchor="middle" font-size="7.5" fill="#8b949e">500m / 512Mi</text>
+      <title>Click → Build Agents LLD</title>
+    </a>
+    <a href="lld.html#build-agents">
+      <rect x="146" y="634" width="98" height="62" rx="6" fill="#1c1100" stroke="#d97706" stroke-width="1.5"/>
+      <rect class="hov" x="146" y="634" width="98" height="62" rx="6"/>
+      <text x="195" y="657" text-anchor="middle" font-size="9" fill="#d97706" font-weight="600">agent-pod-2</text>
+      <text x="195" y="671" text-anchor="middle" font-size="7.5" fill="#6e7681">jnlp · inbound-agent</text>
+      <text x="195" y="685" text-anchor="middle" font-size="7.5" fill="#8b949e">500m / 512Mi</text>
+      <title>Click → Build Agents LLD</title>
+    </a>
+    <a href="lld.html#build-agents">
+      <rect x="256" y="634" width="98" height="62" rx="6" fill="#1c1100" stroke="#d97706" stroke-width="1.5"/>
+      <rect class="hov" x="256" y="634" width="98" height="62" rx="6"/>
+      <text x="305" y="657" text-anchor="middle" font-size="9" fill="#d97706" font-weight="600">agent-pod-N</text>
+      <text x="305" y="671" text-anchor="middle" font-size="7.5" fill="#6e7681">ephemeral</text>
+      <text x="305" y="685" text-anchor="middle" font-size="7.5" fill="#8b949e">lifecycle: build only</text>
+      <title>Click → Build Agents LLD</title>
+    </a>
+
+    <!-- Karpenter agents nodepool -->
+    <a href="lld.html#eks">
+      <rect x="366" y="628" width="514" height="164" rx="6"
+            fill="rgba(31,111,235,0.04)" stroke="#1f6feb" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect class="hov" x="366" y="628" width="514" height="164" rx="6"/>
+      <text x="380" y="645" font-size="8.5" fill="#388bfd" font-weight="700" letter-spacing="0.6">KARPENTER NodePool: agents  (spot + on-demand fallback · taint: workload=agents:NoSchedule)</text>
+      <rect x="380" y="652" width="148" height="120" rx="4" fill="#0d1f3c" stroke="#1f6feb" stroke-width="1"/>
+      <text x="454" y="672" text-anchor="middle" font-size="9" fill="#58a6ff" font-weight="600">Spot Node</text>
+      <text x="454" y="688" text-anchor="middle" font-size="8" fill="#6e7681">m5/t3 family</text>
+      <text x="454" y="704" text-anchor="middle" font-size="8" fill="#6e7681">taint: workload=agents</text>
+      <text x="454" y="720" text-anchor="middle" font-size="7.5" fill="#8b949e">auto-provisioned on demand</text>
+      <text x="454" y="736" text-anchor="middle" font-size="7.5" fill="#8b949e">terminated after build</text>
+      <text x="454" y="752" text-anchor="middle" font-size="7.5" fill="#6e7681">role=agent nodeSelector</text>
+
+      <rect x="542" y="652" width="324" height="120" rx="4" fill="#111" stroke="#30363d" stroke-width="1"/>
+      <text x="704" y="672" text-anchor="middle" font-size="9" fill="#8b949e" font-weight="600">Per-namespace guardrails</text>
+      <text x="704" y="690" text-anchor="middle" font-size="8" fill="#6e7681">ResourceQuota: 16 CPU / 64Gi / 40 pods</text>
+      <text x="704" y="706" text-anchor="middle" font-size="8" fill="#6e7681">LimitRange: default 500m req / 1CPU limit</text>
+      <text x="704" y="722" text-anchor="middle" font-size="8" fill="#6e7681">SA: jenkins  Role: cluster-agent (patch pods/exec)</text>
+      <text x="704" y="738" text-anchor="middle" font-size="7.5" fill="#8b949e">Synced by sync-agent-namespaces.sh via GHA</text>
+      <title>Click → EKS Node Pools LLD</title>
+    </a>
+
+    <!-- ════════════════════════════════════════════
+         AWS SERVICES (right column)
+    ════════════════════════════════════════════ -->
+
+    <!-- EFS -->
+    <a href="lld.html#storage">
+      <rect x="920" y="272" width="185" height="115" rx="8" fill="#1a0f00" stroke="#d97706" stroke-width="2"/>
+      <rect class="hov" x="920" y="272" width="185" height="115" rx="8"/>
+      <rect x="920" y="272" width="185" height="26" rx="8" fill="#d97706"/>
+      <rect x="920" y="285" width="185" height="13" fill="#d97706"/>
+      <text x="1012" y="288" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">Amazon EFS</text>
+      <text x="1012" y="316" text-anchor="middle" font-size="8.5" fill="#d97706">General Purpose · Elastic throughput</text>
+      <text x="1012" y="331" text-anchor="middle" font-size="8.5" fill="#6e7681">KMS encrypted · Multi-AZ</text>
+      <text x="1012" y="346" text-anchor="middle" font-size="8.5" fill="#6e7681">Access Point per controller</text>
+      <text x="1012" y="362" text-anchor="middle" font-size="7.5" fill="#8b949e">StorageClass: efs-ap · RWX (ReadWriteMany)</text>
+      <title>Click → Storage LLD</title>
+    </a>
+
+    <!-- Secrets Manager -->
+    <a href="lld.html#secrets">
+      <rect x="920" y="402" width="185" height="100" rx="8" fill="#1a0000" stroke="#ef4444" stroke-width="1.5"/>
+      <rect class="hov" x="920" y="402" width="185" height="100" rx="8"/>
+      <rect x="920" y="402" width="185" height="26" rx="8" fill="#dc2626"/>
+      <rect x="920" y="415" width="185" height="13" fill="#dc2626"/>
+      <text x="1012" y="419" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">AWS Secrets Manager</text>
+      <text x="1012" y="447" text-anchor="middle" font-size="8" fill="#f87171">cbci-lab/jenkins-admin-secret</text>
+      <text x="1012" y="462" text-anchor="middle" font-size="8" fill="#f87171">cbci-lab/github-webhook-secret</text>
+      <text x="1012" y="477" text-anchor="middle" font-size="8" fill="#6e7681">→ K8s secrets via bootstrap.sh</text>
+      <text x="1012" y="492" text-anchor="middle" font-size="7.5" fill="#8b949e">no static creds in Git</text>
+      <title>Click → Secrets LLD</title>
+    </a>
+
+    <!-- Karpenter -->
+    <a href="lld.html#eks">
+      <rect x="920" y="516" width="185" height="85" rx="8" fill="#0a0a1a" stroke="#7c3aed" stroke-width="1.5"/>
+      <rect class="hov" x="920" y="516" width="185" height="85" rx="8"/>
+      <rect x="920" y="516" width="185" height="26" rx="8" fill="#6d28d9"/>
+      <rect x="920" y="529" width="185" height="13" fill="#6d28d9"/>
+      <text x="1012" y="533" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">Karpenter</text>
+      <text x="1012" y="560" text-anchor="middle" font-size="8.5" fill="#bc8cff">Auto-provisions EC2 nodes</text>
+      <text x="1012" y="575" text-anchor="middle" font-size="8" fill="#6e7681">3 NodePools: system / controllers / agents</text>
+      <text x="1012" y="590" text-anchor="middle" font-size="7.5" fill="#8b949e">Spot interruption handling</text>
+      <title>Click → EKS Node Pools LLD</title>
+    </a>
+
+    <!-- GitOps / CasC -->
+    <a href="lld.html#gitops">
+      <rect x="920" y="616" width="185" height="105" rx="8" fill="#0f1a2e" stroke="#1f6feb" stroke-width="1.5"/>
+      <rect class="hov" x="920" y="616" width="185" height="105" rx="8"/>
+      <rect x="920" y="616" width="185" height="26" rx="8" fill="#1f6feb"/>
+      <rect x="920" y="629" width="185" height="13" fill="#1f6feb"/>
+      <text x="1012" y="633" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">CasC — GitOps</text>
+      <text x="1012" y="661" text-anchor="middle" font-size="8" fill="#58a6ff">casc/oc-bundle/ → OC config</text>
+      <text x="1012" y="676" text-anchor="middle" font-size="8" fill="#58a6ff">casc/controller-bundles/ → controllers</text>
+      <text x="1012" y="691" text-anchor="middle" font-size="8" fill="#6e7681">Retriever polls 1min · OC polls 2min</text>
+      <text x="1012" y="706" text-anchor="middle" font-size="7.5" fill="#8b949e">ocBundleAutomaticVersion: commit SHA</text>
+      <title>Click → GitOps LLD</title>
+    </a>
+
+    <!-- ════════════════════════════════════════════
+         ARROWS
+    ════════════════════════════════════════════ -->
+
+    <!-- Internet → ALB -->
+    <line x1="85" y1="93" x2="85" y2="196" stroke="#6e7681" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ax)"/>
+    <text x="92" y="148" font-size="8" fill="#6e7681">HTTPS</text>
+
+    <!-- Route53 → ALB -->
+    <line x1="75" y1="178" x2="75" y2="196" stroke="#e3b341" stroke-width="1.5" marker-end="url(#ao)"/>
+
+    <!-- ACM → ALB -->
+    <line x1="187" y1="178" x2="187" y2="196" stroke="#e3b341" stroke-width="1.5" marker-end="url(#ao)"/>
+
+    <!-- ALB → OC (into EKS) -->
+    <line x1="135" y1="248" x2="135" y2="324" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#ab)"/>
+    <text x="142" y="290" font-size="8" fill="#58a6ff">:443</text>
+
+    <!-- ALB ↔ SSO Relay -->
+    <path d="M 252 223 Q 591 190 928 223" stroke="#bc8cff" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#ap)"/>
+    <text x="590" y="207" text-anchor="middle" font-size="8" fill="#bc8cff">SAML AuthnRequest / Response</text>
+
+    <!-- SSO Relay ↔ Entra -->
+    <line x1="1095" y1="198" x2="1162" y2="95" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#ap)"/>
+    <text x="1145" y="150" text-anchor="middle" font-size="8" fill="#bc8cff">SAML</text>
+
+    <!-- GitHub → casc-retriever (poll) -->
+    <path d="M 515 93 Q 460 180 240 324" stroke="#e3b341" stroke-width="1.5" fill="none" stroke-dasharray="6,3" marker-end="url(#ao)"/>
+    <text x="415" y="195" font-size="8" fill="#e3b341">git clone / poll 1min</text>
+
+    <!-- GitHub → git-sync (ctrl bundles) -->
+    <path d="M 555 93 Q 500 200 270 324" stroke="#e3b341" stroke-width="1" fill="none" stroke-dasharray="3,3" marker-end="url(#ao)" opacity="0.6"/>
+
+    <!-- GitHub Actions → AWS STS -->
+    <line x1="815" y1="64" x2="880" y2="130" stroke="#e3b341" stroke-width="1.5" marker-end="url(#ao)"/>
+    <text x="865" y="103" font-size="8" fill="#e3b341">OIDC JWT</text>
+
+    <!-- AWS STS → EKS API (dashed) -->
+    <line x1="927" y1="178" x2="900" y2="272" stroke="#e3b341" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ao)"/>
+    <text x="932" y="230" font-size="8" fill="#e3b341">temp creds</text>
+
+    <!-- OC manages citest-1 -->
+    <line x1="275" y1="390" x2="290" y2="390" stroke="#3fb950" stroke-width="1.5" marker-end="url(#ag)"/>
+    <!-- OC manages citest2 -->
+    <path d="M 275 440 Q 283 520 290 520" stroke="#3fb950" stroke-width="1.5" fill="none" marker-end="url(#ag)"/>
+
+    <!-- Controllers spawn agents -->
+    <line x1="392" y1="582" x2="250" y2="632" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ao)"/>
+    <text x="310" y="615" font-size="8" fill="#d97706">spawn agent pods</text>
+
+    <!-- OC → EFS -->
+    <line x1="905" y1="395" x2="918" y2="355" stroke="#d97706" stroke-width="1.5" marker-end="url(#ao)"/>
+
+    <!-- Controllers → EFS -->
+    <line x1="905" y1="510" x2="918" y2="380" stroke="#d97706" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ao)" opacity="0.7"/>
+
+    <!-- Secrets Manager → pods -->
+    <line x1="918" y1="455" x2="894" y2="455" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#ar)"/>
+    <text x="892" y="450" text-anchor="end" font-size="8" fill="#ef4444">K8s secrets</text>
+
+    <!-- Footer note -->
+    <text x="650" y="826" text-anchor="middle" font-size="9.5" fill="#30363d">
+      Click any component above to view its detailed Low Level Design
+    </text>
+  </svg>
+</div>
+
+<!-- ════════════════════════════════════════════
+     END-TO-END FLOW STEPS
+════════════════════════════════════════════ -->
+<div class="flow-wrap">
+  <div class="flow-h">End-to-End Flow — "Developer pushes a CasC change to GitHub"</div>
+  <div class="steps">
+
+    <a class="step" href="lld.html#gitops">
+      <div class="sn">1</div>
+      <div class="sa">Developer</div>
+      <div class="sd">Pushes a commit to <code>main</code> — e.g. edits <code>casc/oc-bundle/jenkins.yaml</code> or a controller bundle. The commit lands on GitHub.</div>
+      <div class="sl">GitOps LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#github-actions">
+      <div class="sn">2</div>
+      <div class="sa">GitHub Actions</div>
+      <div class="sd">If <code>casc/oc-bundle/items.yaml</code> changed, the <code>controller-namespace-sync</code> workflow fires. GitHub mints an OIDC JWT → swaps with AWS STS for 15-min temp creds (no stored keys) → runs <code>sync-agent-namespaces.sh</code> via kubectl.</div>
+      <div class="sl">GHA OIDC LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#github-actions">
+      <div class="sn">3</div>
+      <div class="sa">casc-validate GHA</div>
+      <div class="sd">On every PR, <code>casc-validate.yaml</code> workflow runs: YAML syntax check, OC bundle required-fields check (<code>id / version / apiVersion</code>), controller cross-reference check, unresolved <code>${VAR}</code> placeholder scan.</div>
+      <div class="sl">GHA OIDC LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#gitops">
+      <div class="sn">4</div>
+      <div class="sa">casc-retriever</div>
+      <div class="sd">Quarkus service inside the OC pod polls GitHub every 1 minute. On new commit: git clone → replaces <code>bundle.yaml</code> version with commit SHA (<code>ocBundleAutomaticVersion</code>) → writes bundle to <code>/var/jenkins_config/oc-casc-bundle/</code>.</div>
+      <div class="sl">GitOps LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#cbci-oc">
+      <div class="sn">5</div>
+      <div class="sa">OC bundleUpdateTiming</div>
+      <div class="sd">OC's <code>ConfigurationUpdaterHelper</code> polls its bundle directory every 2 minutes. When the checksum changes it hot-reloads OC config (<code>jenkins.yaml</code>, <code>plugins.yaml</code>, <code>items.yaml</code>) without pod restart.</div>
+      <div class="sl">OC LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#gitops">
+      <div class="sn">6</div>
+      <div class="sa">git-sync sidecar</div>
+      <div class="sd">Separately, the <code>git-sync</code> sidecar container running alongside OC pulls the repo every 60 s. The <code>casc/controller-bundles/</code> directory is always fresh on a shared <code>emptyDir</code> volume.</div>
+      <div class="sl">GitOps LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#cbci-oc">
+      <div class="sn">7</div>
+      <div class="sa">OC bundleStorageService</div>
+      <div class="sd">Polls the git-sync volume using <code>localFolderRetriever</code> every 120 s. When a controller bundle checksum changes it pushes the updated bundle to the affected managed controller via CBCI internal API.</div>
+      <div class="sl">OC LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#ha-controllers">
+      <div class="sn">8</div>
+      <div class="sa">Managed Controller</div>
+      <div class="sd">Both HA replicas receive the updated bundle and hot-reload. <code>PodDisruptionBudget</code> (<code>minAvailable=1</code>) ensures at least one replica stays live during any rolling restart or Karpenter node drain.</div>
+      <div class="sl">HA Controllers LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#identity">
+      <div class="sn">9</div>
+      <div class="sa">Developer triggers build</div>
+      <div class="sd">User hits <code>https://cjoc.myhomettbros.com</code>. ALB routes to SSO Relay → SAML AuthnRequest to Entra ID → user authenticates → Entra returns assertion → OC maps group OID to Jenkins role → session established (sticky ALB cookie).</div>
+      <div class="sl">Identity LLD →</div>
+    </a>
+
+    <a class="step" href="lld.html#build-agents">
+      <div class="sn">10</div>
+      <div class="sa">Build Agent lifecycle</div>
+      <div class="sd">Pipeline job starts. Controller creates an agent pod in <code>ci-agents-citest-1</code> with <code>tolerations: workload=agents</code>. Karpenter detects unschedulable pod → provisions a spot EC2 node in ~30s → agent connects via JNLP → build runs → pod and optionally node are terminated.</div>
+      <div class="sl">Build Agents LLD →</div>
+    </a>
+
+  </div>
+
+  <a href="lld.html" class="btn-lld">View Full Low Level Design →</a>
+</div>
+
+</body>
+</html>
