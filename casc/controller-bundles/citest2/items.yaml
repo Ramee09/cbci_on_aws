@@ -11,12 +11,37 @@ items:
       - kind: pipeline
         name: "hello-world"
         displayName: "Hello World"
-        description: "Smoke test — confirms pod agent starts on EKS"
+        description: "Smoke test — confirms pod agent starts on EKS agents NodePool"
         definition:
           cpsFlowDefinition:
             script: |
               pipeline {
-                agent { label 'default-agent' }
+                agent {
+                  kubernetes {
+                    yaml """
+              apiVersion: v1
+              kind: Pod
+              spec:
+                tolerations:
+                - key: workload
+                  operator: Equal
+                  value: agents
+                  effect: NoSchedule
+                nodeSelector:
+                  role: agent
+                containers:
+                - name: jnlp
+                  image: jenkins/inbound-agent:3273.v4cfe589b_fd83-1
+                  resources:
+                    requests:
+                      cpu: 500m
+                      memory: 512Mi
+                    limits:
+                      cpu: "1"
+                      memory: 1Gi
+              """
+                  }
+                }
                 options { timestamps() }
                 stages {
                   stage('Verify') {
@@ -47,13 +72,8 @@ items:
                 stages {
                   stage('Status') {
                     steps {
-                      script {
-                        def status = httpRequest(
-                          url: "${env.JENKINS_URL}core-casc-export/api/json",
-                          authentication: 'N/A'
-                        )
-                        echo status.content
-                      }
+                      echo "Controller URL: ${env.JENKINS_URL}"
+                      echo "To inspect bundle: ${env.JENKINS_URL}core-casc-export"
                     }
                   }
                 }

@@ -33,6 +33,46 @@ jobs:
           print(f'All YAML files parse cleanly.')
           "
 
+      - name: Validate bundle.yaml required fields
+        run: |
+          python3 - <<'EOF'
+          import yaml, sys, pathlib
+          REQUIRED = {"id", "version", "apiVersion"}
+          errors = 0
+          for f in pathlib.Path("casc").rglob("bundle.yaml"):
+              doc = yaml.safe_load(f.read_text())
+              missing = REQUIRED - set(doc.keys())
+              if missing:
+                  print(f"MISSING fields {missing} in {f}")
+                  errors += 1
+              if "apiVersion" in doc and doc["apiVersion"] not in (1, 2):
+                  print(f"INVALID apiVersion {doc['apiVersion']} in {f} (must be 1 or 2)")
+                  errors += 1
+          if errors:
+              sys.exit(1)
+          print("All bundle.yaml files have required fields.")
+          EOF
+
+      - name: Check controller bundle references exist
+        run: |
+          python3 - <<'EOF'
+          import yaml, sys, pathlib
+          items_file = pathlib.Path("casc/oc-bundle/items.yaml")
+          doc = yaml.safe_load(items_file.read_text())
+          errors = 0
+          for item in doc.get("items", []):
+              if item.get("kind") != "managedController":
+                  continue
+              for prop in item.get("properties", []):
+                  bundle_path = prop.get("configurationAsCode", {}).get("bundle")
+                  if bundle_path and not pathlib.Path(f"casc/{bundle_path}").exists():
+                      print(f"MISSING bundle directory: casc/{bundle_path} (referenced by controller '{item['name']}')")
+                      errors += 1
+          if errors:
+              sys.exit(1)
+          print("All controller bundle references exist.")
+          EOF
+
       - name: Check for known-bad OC attributes
         run: |
           OC=casc/oc-bundle/jenkins.yaml
@@ -45,3 +85,20 @@ jobs:
             exit 1
           fi
           echo "OC bundle: no known-bad attributes found."
+
+      - name: Warn on unresolved credential placeholders in items.yaml
+        run: |
+          python3 - <<'EOF'
+          import re, pathlib, sys
+          warned = 0
+          for f in pathlib.Path("casc").rglob("items.yaml"):
+              text = f.read_text()
+              placeholders = re.findall(r'\$\{([A-Z_][A-Z0-9_]*)\}', text)
+              for ph in set(placeholders):
+                  print(f"WARNING: unresolved placeholder '\${{{ph}}}' in {f} — ensure a K8s secret or env var backs it")
+                  warned += 1
+          if warned:
+              print(f"\n{warned} placeholder(s) found — verify each is backed by AWS Secrets Manager → K8s secret.")
+          else:
+              print("No unresolved placeholders found.")
+          EOF
