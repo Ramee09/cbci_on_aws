@@ -1,11 +1,12 @@
-## Velero v1.18.0 — Phase 13 Backup + DR
-## Chart: vmware-tanzu/velero v12.0.0
+## Velero v8.1.0 — Backup & Disaster Recovery
+## Chart: vmware-tanzu/velero v8.1.0
+## Namespace: velero (created by helm install --create-namespace)
 
 configuration:
   backupStorageLocation:
     - name: default
       provider: aws
-      bucket: cbci-lab-velero-835090871306
+      bucket: cbci-velero-backups-835090871306
       config:
         region: us-east-1
   volumeSnapshotLocation:
@@ -17,10 +18,11 @@ configuration:
 serviceAccount:
   server:
     annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::835090871306:role/cbci-lab-velero"
+      # IAM role ARN injected after terraform/55-backup apply
+      eks.amazonaws.com/role-arn: "arn:aws:iam::835090871306:role/cbci-velero"
 
 credentials:
-  useSecret: false
+  useSecret: false  # use IRSA — no static creds
 
 initContainers:
   - name: velero-plugin-for-aws
@@ -29,7 +31,7 @@ initContainers:
       - mountPath: /target
         name: plugins
 
-# Run on controller nodes
+# Run on controller nodes (stable, always-on MNG)
 nodeSelector:
   role: controller
 
@@ -41,14 +43,32 @@ resources:
     cpu: 500m
     memory: 512Mi
 
-# Daily schedule: backup cloudbees namespace at 2am UTC, keep 7 days
+# ── Backup Schedules ──────────────────────────────────────────
+# Daily at 02:00 UTC — backs up all CBCI namespaces
+# TTL 720h (30 days) matches AWS Backup retention
 schedules:
-  cloudbees-daily:
+  cbci-daily:
     disabled: false
     schedule: "0 2 * * *"
     useOwnerReferencesInBackup: false
     template:
-      ttl: "168h"
-      includedNamespaces:
-        - cloudbees
+      ttl: "720h"
       storageLocation: default
+      includedNamespaces:
+        - ci-controllers
+        - ci-agents-controller-1
+        - ci-agents-controller-2
+      # Include cluster-scoped resources that belong to these namespaces
+      includeClusterResources: true
+
+  # Pre-maintenance manual trigger — kept for 48h only
+  # Usage: velero backup create pre-maint-$(date +%Y%m%d) --from-schedule cbci-pre-maintenance
+  cbci-pre-maintenance:
+    disabled: true
+    schedule: "0 0 1 1 *"  # placeholder (manual trigger only)
+    template:
+      ttl: "48h"
+      storageLocation: default
+      includedNamespaces:
+        - ci-controllers
+      includeClusterResources: true
