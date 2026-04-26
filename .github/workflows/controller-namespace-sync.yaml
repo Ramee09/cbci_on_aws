@@ -24,17 +24,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # TODO: switch to OIDC once terraform/45-github-oidc is applied.
-      # After applying, replace these two secrets with:
-      #   role-to-assume: ${{ secrets.CBCI_GHA_ROLE_ARN }}
-      #   aws-region: us-east-1
-      # and add the role ARN to GitHub repo secrets as CBCI_GHA_ROLE_ARN.
-      # Also update the EKS access entry to grant that role cluster access.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.CBCI_GHA_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Update kubeconfig for cbci-lab cluster
