@@ -1,0 +1,183 @@
+name: Rebuild Lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type REBUILD to start — adds ~$13/day cost'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "835090871306"
+  CLUSTER: cbci-lab
+
+jobs:
+  rebuild:
+    name: Rebuild CBCI lab
+    runs-on: ubuntu-latest
+    if: ${{ inputs.confirm == 'REBUILD' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/cbci-lab-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Recreate Secrets Manager secrets (idempotent)
+        run: |
+          set +e
+          # Generate fresh creds only if secrets don't exist
+          for s in cbci-lab/jenkins-admin-password cbci-lab/github-webhook-secret; do
+            aws secretsmanager describe-secret --secret-id "$s" --region "$AWS_REGION" >/dev/null 2>&1
+            if [ $? -ne 0 ]; then
+              if [ "$s" = "cbci-lab/jenkins-admin-password" ]; then
+                pw=$(openssl rand -base64 24)
+                aws secretsmanager create-secret --name "$s" --secret-string "{\"password\":\"$pw\"}" --region "$AWS_REGION"
+              else
+                sec=$(openssl rand -hex 32)
+                aws secretsmanager create-secret --name "$s" --secret-string "{\"secret\":\"$sec\"}" --region "$AWS_REGION"
+              fi
+            fi
+          done
+
+      - name: CDK bootstrap + deploy all stacks
+        working-directory: cdk
+        run: |
+          npm install --silent
+          npx cdk bootstrap aws://$AWS_ACCOUNT_ID/$AWS_REGION
+          npx cdk deploy --all --require-approval never
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "$CLUSTER" --region "$AWS_REGION"
+
+      - name: Wait for cluster pods to settle
+        run: |
+          for i in {1..30}; do
+            kubectl get pods -n cloudbees -l com.cloudbees.cje.tenant=controller-1 2>/dev/null | grep -c "1/1.*Running" >/dev/null && break
+            echo "Waiting for controllers to be Ready ($i/30)..."
+            sleep 30
+          done
+
+      - name: Setup Velero S3 bucket + IAM (if not present)
+        run: |
+          OIDC=$(aws eks describe-cluster --name "$CLUSTER" --region "$AWS_REGION" --query 'cluster.identity.oidc.issuer' --output text | sed 's|https://||')
+          BUCKET="cbci-velero-backups-$AWS_ACCOUNT_ID"
+
+          if ! aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            aws s3api create-bucket --bucket "$BUCKET" --region "$AWS_REGION"
+            aws s3api put-bucket-versioning --bucket "$BUCKET" --versioning-configuration Status=Enabled
+            aws s3api put-bucket-encryption --bucket "$BUCKET" \
+              --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+            aws s3api put-public-access-block --bucket "$BUCKET" \
+              --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+          fi
+
+          # Velero IAM role
+          if ! aws iam get-role --role-name cbci-velero >/dev/null 2>&1; then
+            python3 -c "
+import json
+oidc='$OIDC'
+print(json.dumps({
+  'Version':'2012-10-17',
+  'Statement':[{
+    'Effect':'Allow',
+    'Principal':{'Federated':f'arn:aws:iam::$AWS_ACCOUNT_ID:oidc-provider/{oidc}'},
+    'Action':'sts:AssumeRoleWithWebIdentity',
+    'Condition':{'StringEquals':{
+      f'{oidc}:sub':'system:serviceaccount:velero:velero-server',
+      f'{oidc}:aud':'sts.amazonaws.com'
+    }}
+  }]
+}))" > /tmp/velero-trust.json
+            aws iam create-role --role-name cbci-velero --assume-role-policy-document file:///tmp/velero-trust.json
+            cat <<EOF > /tmp/velero-policy.json
+{"Version":"2012-10-17","Statement":[
+  {"Effect":"Allow","Action":["ec2:DescribeVolumes","ec2:DescribeSnapshots","ec2:CreateTags","ec2:CreateVolume","ec2:CreateSnapshot","ec2:DeleteSnapshot"],"Resource":"*"},
+  {"Effect":"Allow","Action":["s3:GetObject","s3:DeleteObject","s3:PutObject","s3:AbortMultipartUpload","s3:ListMultipartUploadParts"],"Resource":"arn:aws:s3:::$BUCKET/*"},
+  {"Effect":"Allow","Action":["s3:ListBucket"],"Resource":"arn:aws:s3:::$BUCKET"}
+]}
+EOF
+            aws iam put-role-policy --role-name cbci-velero --policy-name VeleroBackupPolicy --policy-document file:///tmp/velero-policy.json
+          fi
+
+      - name: Install Velero (helm)
+        run: |
+          helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts
+          helm repo update vmware-tanzu
+          helm upgrade --install velero vmware-tanzu/velero \
+            --version 8.1.0 \
+            --namespace velero --create-namespace \
+            --values helm/values-velero.yaml \
+            --set "kubectl.image.repository=public.ecr.aws/bitnami/kubectl" \
+            --set "kubectl.image.tag=1.31" \
+            --wait --timeout 5m
+
+      - name: Setup AWS Backup vault + plan
+        run: |
+          EFS_ARN=$(aws efs describe-file-systems --region "$AWS_REGION" --query 'FileSystems[0].FileSystemArn' --output text)
+          aws backup create-backup-vault --backup-vault-name cbci-lab-efs-vault --region "$AWS_REGION" || true
+
+          if ! aws iam get-role --role-name cbci-lab-aws-backup-efs >/dev/null 2>&1; then
+            cat <<'EOF' > /tmp/backup-trust.json
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"backup.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+EOF
+            aws iam create-role --role-name cbci-lab-aws-backup-efs --assume-role-policy-document file:///tmp/backup-trust.json
+            aws iam attach-role-policy --role-name cbci-lab-aws-backup-efs --policy-arn arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup
+            aws iam attach-role-policy --role-name cbci-lab-aws-backup-efs --policy-arn arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores
+            sleep 15  # IAM propagation
+          fi
+
+          cat <<EOF > /tmp/backup-plan.json
+{
+  "BackupPlanName": "cbci-lab-efs-daily",
+  "Rules": [{"RuleName":"DailyAtTwoAmUTC","TargetBackupVaultName":"cbci-lab-efs-vault","ScheduleExpression":"cron(0 2 * * ? *)","StartWindowMinutes":60,"CompletionWindowMinutes":180,"Lifecycle":{"DeleteAfterDays":30}}]
+}
+EOF
+          PLAN_ID=$(aws backup create-backup-plan --backup-plan file:///tmp/backup-plan.json --region "$AWS_REGION" --query 'BackupPlanId' --output text 2>/dev/null || \
+                    aws backup list-backup-plans --region "$AWS_REGION" --query "BackupPlansList[?BackupPlanName=='cbci-lab-efs-daily'].BackupPlanId" --output text)
+          cat <<EOF > /tmp/backup-selection.json
+{"SelectionName":"cbci-efs-selection","IamRoleArn":"arn:aws:iam::$AWS_ACCOUNT_ID:role/cbci-lab-aws-backup-efs","Resources":["$EFS_ARN"]}
+EOF
+          aws backup create-backup-selection --backup-plan-id "$PLAN_ID" --backup-selection file:///tmp/backup-selection.json --region "$AWS_REGION" || true
+
+      - name: Create cjoc DNS record
+        run: |
+          ALB_HOST=$(kubectl get ingress cjoc -n cloudbees -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          ALB_NAME=$(echo "$ALB_HOST" | cut -d. -f1)
+          ALB_ZONE=$(aws elbv2 describe-load-balancers --names "$ALB_NAME" --region "$AWS_REGION" --query 'LoadBalancers[0].CanonicalHostedZoneId' --output text)
+          HOSTED_ZONE_ID=$(aws route53 list-hosted-zones --query "HostedZones[?Name=='myhomettbros.com.'].Id" --output text | cut -d/ -f3)
+
+          cat <<EOF > /tmp/cjoc-record.json
+{
+  "Changes": [{
+    "Action": "UPSERT",
+    "ResourceRecordSet": {
+      "Name": "cjoc.myhomettbros.com.",
+      "Type": "A",
+      "AliasTarget": {"HostedZoneId": "$ALB_ZONE", "DNSName": "$ALB_HOST", "EvaluateTargetHealth": true}
+    }
+  }]
+}
+EOF
+          aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" --change-batch file:///tmp/cjoc-record.json
+
+      - name: Final summary
+        run: |
+          echo "=== Rebuild complete ==="
+          echo "OC URL: https://cjoc.myhomettbros.com/cjoc/"
+          echo "Admin password: aws secretsmanager get-secret-value --secret-id cbci-lab/jenkins-admin-password --query SecretString --output text | jq -r .password"
+          kubectl get pods -n cloudbees

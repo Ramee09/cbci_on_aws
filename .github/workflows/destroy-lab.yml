@@ -1,0 +1,179 @@
+name: Destroy Lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DESTROY to confirm full teardown — this is irreversible'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write   # required for OIDC
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "835090871306"
+  CLUSTER: cbci-lab
+
+jobs:
+  destroy:
+    name: Destroy CBCI lab
+    runs-on: ubuntu-latest
+    if: ${{ inputs.confirm == 'DESTROY' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/cbci-lab-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name "$CLUSTER" --region "$AWS_REGION" || \
+            echo "Cluster may already be deleted — continuing"
+
+      - name: Phase 1 — Delete Ingresses (release ALB)
+        run: |
+          kubectl delete ingress --all -A --ignore-not-found --timeout=60s || true
+
+      - name: Phase 1 — Helm uninstall apps
+        run: |
+          for ns_release in cloudbees:cbci kube-system:external-dns kube-system:metrics-server velero:velero; do
+            ns="${ns_release%%:*}"
+            rel="${ns_release##*:}"
+            helm uninstall "$rel" -n "$ns" --ignore-not-found || true
+          done
+
+      - name: Phase 1 — Delete Karpenter NodePools/EC2NodeClass and uninstall
+        run: |
+          kubectl delete nodepool --all --ignore-not-found || true
+          kubectl delete ec2nodeclass --all --ignore-not-found || true
+          # Wait for NodeClaims to drain (max 3 min)
+          for i in {1..18}; do
+            count=$(kubectl get nodeclaims -o name 2>/dev/null | wc -l)
+            [ "$count" = "0" ] && break
+            echo "Waiting for $count NodeClaims to drain..."
+            sleep 10
+          done
+          helm uninstall karpenter -n karpenter --ignore-not-found || true
+
+      - name: Phase 1 — Helm uninstall ALB controller (last)
+        run: |
+          helm uninstall aws-load-balancer-controller -n kube-system --ignore-not-found || true
+
+      - name: Phase 1 — Delete CBCI namespaces (clears PVCs + pods)
+        run: |
+          for ns in cloudbees ci-controllers ci-agents-citest-1 ci-agents-citest2 \
+                   ci-agents-controller-1 ci-agents-controller-2 \
+                   controller-1-builds controller-2-builds controller1-builds \
+                   cloudbees-builds karpenter velero; do
+            kubectl delete namespace "$ns" --ignore-not-found --timeout=180s || true
+          done
+
+      - name: Phase 2 — CDK destroy all stacks
+        working-directory: cdk
+        run: |
+          npm install --silent
+          # Destroy in reverse dependency order; --force skips confirmation
+          npx cdk destroy --all --force || true
+
+      - name: Phase 2a — Cleanup hung CFN stacks (kubectl-managed custom resources)
+        run: |
+          # CDK destroy can fail when cluster is already gone and kubectl custom
+          # resources hang. Retry each stack with --retain-resources for any
+          # remaining custom resources to force completion.
+          for stack in CbciStack CbciStorageStack CbciEksStack CbciNetworkStack; do
+            status=$(aws cloudformation describe-stacks --stack-name "$stack" --region "$AWS_REGION" --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "GONE")
+            if [ "$status" = "DELETE_FAILED" ]; then
+              echo "Retrying $stack with --retain-resources for kubectl-managed resources"
+              hung=$(aws cloudformation list-stack-resources --stack-name "$stack" --region "$AWS_REGION" \
+                --query 'StackResourceSummaries[?contains(ResourceType, `Custom::AWSCDK-EKS`)].LogicalResourceId' \
+                --output text 2>/dev/null)
+              if [ -n "$hung" ]; then
+                aws cloudformation delete-stack --stack-name "$stack" --region "$AWS_REGION" --retain-resources $hung
+                aws cloudformation wait stack-delete-complete --stack-name "$stack" --region "$AWS_REGION" || true
+              fi
+            fi
+          done
+
+      - name: Phase 3 — Manual sweep — backup, secrets, S3, KMS, CW logs
+        run: |
+          # AWS Backup
+          for plan_id in $(aws backup list-backup-plans --region "$AWS_REGION" --query 'BackupPlansList[].BackupPlanId' --output text); do
+            for sel_id in $(aws backup list-backup-selections --backup-plan-id "$plan_id" --region "$AWS_REGION" --query 'BackupSelectionsList[].SelectionId' --output text); do
+              aws backup delete-backup-selection --backup-plan-id "$plan_id" --selection-id "$sel_id" --region "$AWS_REGION" || true
+            done
+            aws backup delete-backup-plan --backup-plan-id "$plan_id" --region "$AWS_REGION" || true
+          done
+          for vault in $(aws backup list-backup-vaults --region "$AWS_REGION" --query 'BackupVaultList[?BackupVaultName!=`Default` && BackupVaultName!=`aws/efs/automatic-backup-vault`].BackupVaultName' --output text); do
+            for arn in $(aws backup list-recovery-points-by-backup-vault --backup-vault-name "$vault" --region "$AWS_REGION" --query 'RecoveryPoints[].RecoveryPointArn' --output text); do
+              aws backup delete-recovery-point --backup-vault-name "$vault" --recovery-point-arn "$arn" --region "$AWS_REGION" || true
+            done
+            aws backup delete-backup-vault --backup-vault-name "$vault" --region "$AWS_REGION" || true
+          done
+
+          # Velero S3 bucket (empty + delete)
+          BUCKET=cbci-velero-backups-$AWS_ACCOUNT_ID
+          if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            aws s3api list-object-versions --bucket "$BUCKET" --output json 2>/dev/null | \
+              python3 -c "
+import json, sys, subprocess
+d = json.load(sys.stdin) if sys.stdin.isatty() == False else {}
+items = (d.get('Versions') or []) + (d.get('DeleteMarkers') or [])
+if items:
+    payload = {'Objects': [{'Key': x['Key'], 'VersionId': x['VersionId']} for x in items], 'Quiet': True}
+    with open('/tmp/del.json', 'w') as f: json.dump(payload, f)
+    subprocess.run(['aws', 's3api', 'delete-objects', '--bucket', '$BUCKET', '--delete', 'file:///tmp/del.json'], check=False)
+" || true
+            aws s3 rb "s3://$BUCKET" --force || true
+          fi
+
+          # Secrets Manager (force delete, no recovery)
+          for s in cbci-lab/jenkins-admin-password cbci-lab/github-webhook-secret; do
+            aws secretsmanager delete-secret --secret-id "$s" --force-delete-without-recovery --region "$AWS_REGION" || true
+          done
+
+          # KMS keys (schedule deletion)
+          for k in $(aws kms list-keys --region "$AWS_REGION" --query 'Keys[].KeyId' --output text); do
+            mgr=$(aws kms describe-key --key-id "$k" --region "$AWS_REGION" --query 'KeyMetadata.[KeyManager,KeyState,Description]' --output text 2>/dev/null)
+            if echo "$mgr" | grep -qE "^CUSTOMER\sEnabled.*cbci"; then
+              aws kms schedule-key-deletion --key-id "$k" --pending-window-in-days 7 --region "$AWS_REGION" || true
+            fi
+          done
+
+          # CloudWatch log groups (cbci/eks-related)
+          aws logs describe-log-groups --region "$AWS_REGION" \
+            --query 'logGroups[?contains(logGroupName, `cbci`) || contains(logGroupName, `Cbci`) || contains(logGroupName, `eks`)].logGroupName' \
+            --output text | tr '\t' '\n' | while read lg; do
+            [ -z "$lg" ] && continue
+            aws logs delete-log-group --log-group-name "$lg" --region "$AWS_REGION" || true
+          done
+
+      - name: Phase 4 — Final verification
+        run: |
+          echo "=== Remaining chargeable resources ==="
+          for label in EC2 EKS EFS ALB NAT EIP EBS VPC CFN ECR; do
+            case "$label" in
+              EC2)  result=$(aws ec2 describe-instances --region "$AWS_REGION" --filters "Name=instance-state-name,Values=running,pending,stopping,stopped" --query 'Reservations[].Instances[].InstanceId' --output text);;
+              EKS)  result=$(aws eks list-clusters --region "$AWS_REGION" --query 'clusters' --output text);;
+              EFS)  result=$(aws efs describe-file-systems --region "$AWS_REGION" --query 'FileSystems[].FileSystemId' --output text);;
+              ALB)  result=$(aws elbv2 describe-load-balancers --region "$AWS_REGION" --query 'LoadBalancers[].LoadBalancerName' --output text);;
+              NAT)  result=$(aws ec2 describe-nat-gateways --region "$AWS_REGION" --filter "Name=state,Values=available,pending" --query 'NatGateways[].NatGatewayId' --output text);;
+              EIP)  result=$(aws ec2 describe-addresses --region "$AWS_REGION" --query 'Addresses[].PublicIp' --output text);;
+              EBS)  result=$(aws ec2 describe-volumes --region "$AWS_REGION" --query 'Volumes[].VolumeId' --output text);;
+              VPC)  result=$(aws ec2 describe-vpcs --region "$AWS_REGION" --filters "Name=is-default,Values=false" --query 'Vpcs[].VpcId' --output text);;
+              CFN)  result=$(aws cloudformation describe-stacks --region "$AWS_REGION" --query 'Stacks[?starts_with(StackName, `Cbci`)].StackName' --output text);;
+              ECR)  result=$(aws ecr describe-repositories --region "$AWS_REGION" --query 'repositories[].repositoryName' --output text);;
+            esac
+            if [ -z "$result" ]; then
+              echo "$label: ✓ EMPTY"
+            else
+              echo "$label: STILL PRESENT — $result"
+            fi
+          done
+          echo "=== Done. Route 53 hosted zone myhomettbros.com is preserved (your domain). ==="
