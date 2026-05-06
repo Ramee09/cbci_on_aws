@@ -233,6 +233,28 @@ export class CbciStack extends cdk.Stack {
           },
         },
 
+        SsoRelay: {
+          enabled: true,
+          ingress: {
+            annotations: {
+              'alb.ingress.kubernetes.io/healthcheck-path': '/q/health/ready',
+              'alb.ingress.kubernetes.io/success-codes':    '200',
+            },
+          },
+          controller: {
+            replicas:     2,
+            nodeSelector: { role: 'controller' },
+            javaOpts:
+              '-Dquarkus.http.proxy.proxy-address-forwarding=true ' +
+              '-Dquarkus.http.proxy.enable-forwarded-host=true ' +
+              '-Dquarkus.http.proxy.allow-x-forwarded=true',
+            resources: {
+              requests: { cpu: '100m', memory: '500Mi' },
+              limits:   {              memory: '500Mi' },
+            },
+          },
+        },
+
         Agents: { SeparateNamespace: { Enabled: true, Create: true } },
 
         Persistence: {
