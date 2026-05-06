@@ -119,6 +119,13 @@ export class CbciStack extends cdk.Stack {
       values: {
         OperationsCenter: {
           Platform: 'standard',
+          Protocol: 'https',
+          HostName: OC_HOSTNAME,
+
+          // Protocol + HostName above make the chart compute SSORELAY_FRONTEND_URL
+          // and com.cloudbees.networking.* JVM properties correctly. A null HostName
+          // produces SSORELAY_FRONTEND_URL=http:///sso-relay/ → SAML AuthnRequest
+          // with malformed AssertionConsumerServiceURL → AADSTS7500511 from Entra.
 
           // SCM Retriever: OC pulls casc/ from GitHub, hot-reloads on change
           CasC: {
@@ -132,13 +139,6 @@ export class CbciStack extends cdk.Stack {
               githubWebhooksEnabled: 'false',
             },
           },
-
-          JavaOpts: [
-            `-Dcom.cloudbees.networking.protocol=https`,
-            `-Dcom.cloudbees.networking.hostname=${OC_HOSTNAME}`,
-            `-Dcom.cloudbees.networking.useSubdomain=false`,
-            `-Dcom.cloudbees.networking.port=443`,
-          ].join(' '),
 
           ContainerEnv: [{
             name: 'JENKINS_ADMIN_PASSWORD',
@@ -192,7 +192,6 @@ export class CbciStack extends cdk.Stack {
           },
 
           ServiceType: 'ClusterIP',
-          HostName:    null,
 
           Ingress: {
             Class: 'alb',
