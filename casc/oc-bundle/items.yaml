@@ -24,7 +24,7 @@ items:
         image: "CloudBees CI - Managed Controller - 2.555.1.36485"
         javaOptions: >-
           -Dcom.cloudbees.ha=true
-          -Dhazelcast.kubernetes.namespace=ci-controllers
+          -Dhazelcast.kubernetes.namespace=cloudbees
           -Djenkins.install.runSetupWizard=false
           -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-controller-1
         replication:
@@ -63,7 +63,7 @@ items:
         image: "CloudBees CI - Managed Controller - 2.555.1.36485"
         javaOptions: >-
           -Dcom.cloudbees.ha=true
-          -Dhazelcast.kubernetes.namespace=ci-controllers
+          -Dhazelcast.kubernetes.namespace=cloudbees
           -Djenkins.install.runSetupWizard=false
           -Dcom.cloudbees.jenkins.plugins.kube.NamespaceFilter.defaultNamespace=ci-agents-controller-2
         replication:
