@@ -3,7 +3,7 @@ jenkins:
   numExecutors: 0
   authorizationStrategy:
     loggedInUsersCanDoAnything:
-      allowAnonymousRead: true
+      allowAnonymousRead: false
   securityRealm:
     saml:
       advancedConfiguration:
